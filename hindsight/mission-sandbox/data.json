@@ -1,0 +1,237 @@
+{
+  "narrator": "",
+  "documents": [
+    {
+      "id": "journal-03-15",
+      "date": "2024-03-15",
+      "text": "Hey \u2014 quick update: I just accepted the senior product designer role at Lumen Labs! I'm relocating from Seattle to Austin next month to start. A bit nervous but mostly thrilled."
+    },
+    {
+      "id": "journal-05-02",
+      "date": "2024-05-02",
+      "text": "Settled into Austin finally. The big news: I adopted a rescue greyhound and named him Pixel. My favorite thing now is taking him to Zilker Park on Saturday mornings. I also signed up for a beginner pottery class \u2014 I've always wanted to try it."
+    },
+    {
+      "id": "journal-06-20",
+      "date": "2024-06-20",
+      "text": "Big week. We shipped the onboarding redesign I led at Lumen and the early metrics look great. To celebrate I booked a solo trip to Lisbon in September \u2014 I've wanted to see the tilework and architecture for years. Also: I switched to oat milk, since dairy's been upsetting my stomach."
+    }
+  ],
+  "golden": [
+    "Maya is a senior product designer at Lumen Labs.",
+    "Maya relocated from Seattle to Austin around April 2024.",
+    "Maya adopted a rescue greyhound named Pixel.",
+    "Maya's favorite weekend activity is taking Pixel to Zilker Park on Saturday mornings.",
+    "Maya signed up for a beginner pottery class because she always wanted to try it.",
+    "Maya led and shipped the onboarding redesign at Lumen Labs (June 2024).",
+    "Maya booked a solo trip to Lisbon in September 2024 to see the architecture and tilework.",
+    "Maya switched to oat milk because dairy upsets her stomach."
+  ],
+  "baseline": {
+    "mission": "Only record professional facts about the person: their name, job title, and employer. Do not record pets, hobbies, preferences, travel, or personal plans.",
+    "facts": [
+      {
+        "doc": "journal-03-15",
+        "text": "User accepted the senior product designer role at Lumen Labs. | When: on March 15, 2024 | Involving: user",
+        "fact_type": "experience",
+        "occurred_start": "2024-03-15T00:00:00+00:00",
+        "entities": [
+          "user",
+          "senior product designer",
+          "Lumen Labs"
+        ]
+      },
+      {
+        "doc": "journal-03-15",
+        "text": "User is relocating from Seattle to Austin. | When: in April 2024 | Involving: user | to start the new senior product designer role at Lumen Labs",
+        "fact_type": "experience",
+        "occurred_start": "2024-04-01T00:00:00+00:00",
+        "entities": [
+          "user",
+          "Seattle",
+          "Austin"
+        ]
+      },
+      {
+        "doc": "journal-06-20",
+        "text": "The user led the onboarding redesign project at Lumen, which was shipped this week and showed great early metrics. | When: during the week of June 20, 2024 | Involving: user",
+        "fact_type": "experience",
+        "occurred_start": "2024-06-17T00:00:00+00:00",
+        "entities": [
+          "user",
+          "Lumen",
+          "onboarding redesign"
+        ]
+      }
+    ],
+    "usage": {
+      "input": 5731,
+      "output": 738
+    },
+    "coverage": {
+      "covered": [
+        0,
+        1,
+        5
+      ],
+      "missing": [
+        "Maya adopted a rescue greyhound named Pixel.",
+        "Maya's favorite weekend activity is taking Pixel to Zilker Park on Saturday mornings.",
+        "Maya signed up for a beginner pottery class because she always wanted to try it.",
+        "Maya booked a solo trip to Lisbon in September 2024 to see the architecture and tilework.",
+        "Maya switched to oat milk because dairy upsets her stomach."
+      ],
+      "total": 8
+    }
+  },
+  "refined": {
+    "mission": "Extract durable facts about each person \u2014 identity, job/career, residence, and relocations (with dates). ALSO capture, attributed to the right person: pets (names), personal preferences and favorites, plans and intentions, the motivation or reason behind a decision, and notable dated events or achievements.",
+    "facts": [
+      {
+        "doc": "journal-03-15",
+        "text": "User accepted the senior product designer role at Lumen Labs. | When: on March 15, 2024 | Involving: user",
+        "fact_type": "experience",
+        "occurred_start": "2024-03-15T00:00:00+00:00",
+        "entities": [
+          "user",
+          "Lumen Labs",
+          "senior product designer"
+        ]
+      },
+      {
+        "doc": "journal-03-15",
+        "text": "User is relocating from Seattle to Austin in April 2024 to start the new role. | When: in April 2024 | Involving: user | To start the senior product designer role at Lumen Labs.",
+        "fact_type": "experience",
+        "occurred_start": "2024-04-01T00:00:00+00:00",
+        "entities": [
+          "user",
+          "Seattle",
+          "Austin"
+        ]
+      },
+      {
+        "doc": "journal-03-15",
+        "text": "User feels nervous but mostly thrilled about the upcoming relocation and new job. | Involving: user",
+        "fact_type": "experience",
+        "occurred_start": null,
+        "entities": [
+          "user"
+        ]
+      },
+      {
+        "doc": "journal-05-02",
+        "text": "The user has finally settled into Austin. | Involving: user",
+        "fact_type": "experience",
+        "occurred_start": null,
+        "entities": [
+          "user",
+          "Austin"
+        ]
+      },
+      {
+        "doc": "journal-05-02",
+        "text": "The user adopted a rescue greyhound and named him Pixel. | Involving: user, Pixel (user's rescue greyhound)",
+        "fact_type": "experience",
+        "occurred_start": null,
+        "entities": [
+          "user",
+          "Pixel",
+          "greyhound"
+        ]
+      },
+      {
+        "doc": "journal-05-02",
+        "text": "The user's favorite activity is taking their rescue greyhound, Pixel, to Zilker Park on Saturday mornings. | When: Saturday mornings (ongoing) | Involving: user, Pixel (user's rescue greyhound)",
+        "fact_type": "experience",
+        "occurred_start": null,
+        "entities": [
+          "user",
+          "Pixel",
+          "Zilker Park"
+        ]
+      },
+      {
+        "doc": "journal-05-02",
+        "text": "The user has always wanted to try pottery. | Involving: user",
+        "fact_type": "experience",
+        "occurred_start": null,
+        "entities": [
+          "user",
+          "pottery"
+        ]
+      },
+      {
+        "doc": "journal-05-02",
+        "text": "The user signed up for a beginner pottery class. | Involving: user",
+        "fact_type": "experience",
+        "occurred_start": null,
+        "entities": [
+          "user",
+          "pottery class"
+        ]
+      },
+      {
+        "doc": "journal-06-20",
+        "text": "The user led and shipped an onboarding redesign at Lumen, and its early metrics currently look great. | When: During the week of June 17-23, 2024 | Involving: user",
+        "fact_type": "experience",
+        "occurred_start": "2024-06-17T00:00:00+00:00",
+        "entities": [
+          "user",
+          "Lumen",
+          "onboarding redesign"
+        ]
+      },
+      {
+        "doc": "journal-06-20",
+        "text": "The user booked a solo trip to Lisbon for September 2024. | When: During the week of June 17-23, 2024 | Involving: user | To celebrate the successful onboarding redesign at Lumen.",
+        "fact_type": "experience",
+        "occurred_start": "2024-06-17T00:00:00+00:00",
+        "entities": [
+          "user",
+          "Lisbon"
+        ]
+      },
+      {
+        "doc": "journal-06-20",
+        "text": "The user has wanted to see Lisbon's tilework and architecture for years. | Involving: user",
+        "fact_type": "experience",
+        "occurred_start": null,
+        "entities": [
+          "user",
+          "Lisbon",
+          "tilework",
+          "architecture"
+        ]
+      },
+      {
+        "doc": "journal-06-20",
+        "text": "The user switched to oat milk because dairy has been upsetting their stomach. | Involving: user | Dairy was upsetting their stomach.",
+        "fact_type": "experience",
+        "occurred_start": null,
+        "entities": [
+          "user",
+          "oat milk",
+          "dairy"
+        ]
+      }
+    ],
+    "usage": {
+      "input": 5812,
+      "output": 2320
+    },
+    "coverage": {
+      "covered": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "missing": [],
+      "total": 8
+    }
+  }
+}
