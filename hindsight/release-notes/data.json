@@ -1,0 +1,143 @@
+{
+  "version": "0.8.3",
+  "date": "June 18, 2026",
+  "kicker": "release notes",
+  "tagline": "Preview extraction, OCR ingestion, and sharper retrieval.",
+  "blogUrl": "hindsight.vectorize.io/blog/2026/06/18/version-0-8-3",
+  "docsUrl": "docs.hindsight.vectorize.io",
+  "homeUrl": "hindsight.vectorize.io",
+  "repo": "vectorize-io/hindsight",
+  "stars": "16.5k",
+  "features": [
+    {
+      "category": "preview",
+      "title": "Dry-Run Fact Extraction",
+      "summary": "Preview the facts a document yields — and tune your retain mission before you store.",
+      "example": {
+        "kind": "dry-run",
+        "endpoint": "POST /banks/demo/memories/dry-run-extract",
+        "content": "Priya left Stripe to start Verdana, a climate-fintech startup, and is hiring two backend engineers. She loves bouldering and just adopted a cat named Pixel.",
+        "variants": [
+          {
+            "mission": "professional only",
+            "facts": [
+              "Priya left Stripe to start Verdana, hiring two backend engineers."
+            ]
+          },
+          {
+            "mission": "+ personal details",
+            "facts": [
+              "Priya left Stripe to start Verdana, hiring two backend engineers.",
+              "Priya loves bouldering and adopted a cat named Pixel."
+            ],
+            "newFrom": 1
+          }
+        ],
+        "caption": "Pass a candidate retain_mission (or any retain param), preview the facts, repeat — all without storing. The fast loop for dialing in a bank."
+      }
+    },
+    {
+      "category": "ingestion",
+      "title": "Document OCR",
+      "summary": "Point MarkItDown's image OCR at a vision LLM — turn scans & photos into memory.",
+      "example": {
+        "kind": "config-redact",
+        "neutral": true,
+        "codeTitle": "server config",
+        "code": "# MarkItDown already reads PDF/DOCX — 0.8.3 OCRs images via a vision LLM\nHINDSIGHT_API_FILE_PARSER_MARKITDOWN_OCR_ENABLED=true\nHINDSIGHT_API_FILE_PARSER_MARKITDOWN_OCR_MODEL=gpt-4o-mini",
+        "beforeLabel": "scanned image",
+        "before": "receipt-042.jpg · photo of a printed receipt",
+        "afterLabel": "retained as text",
+        "after": "Acme Corp — Rust consulting · Apr 15 · $1,240",
+        "caption": "MarkItDown handled PDF, DOCX, PPTX, XLSX already; 0.8.3 adds an OpenAI-compatible vision endpoint, so images & scans become memory."
+      }
+    },
+    {
+      "category": "retrieval",
+      "title": "Sharper Retrieval",
+      "summary": "Pinpoint recall with exact tag matching — now surfaced everywhere.",
+      "example": {
+        "kind": "scopes-table",
+        "setupLine": "A memory tagged [user:alice, team:eng] — tags_match decides which filters return it:",
+        "setupTags": [
+          "user:alice",
+          "team:eng"
+        ],
+        "modes": [
+          {
+            "name": "any",
+            "tag": "default",
+            "built": "OR · includes untagged",
+            "answers": "any of the filter tags overlap"
+          },
+          {
+            "name": "all",
+            "built": "AND · includes untagged",
+            "answers": "all filter tags are present"
+          },
+          {
+            "name": "any_strict",
+            "built": "OR · tagged only",
+            "answers": "any overlap, never untagged"
+          },
+          {
+            "name": "all_strict",
+            "built": "AND · tagged only",
+            "answers": "all present, never untagged"
+          },
+          {
+            "name": "exact",
+            "tag": "surfaced in 0.8.3",
+            "highlight": true,
+            "built": "set equality",
+            "answers": "exactly these tags — nothing broader"
+          }
+        ],
+        "recalls": [
+          {
+            "code": "recall(tags=[\"user:alice\"],            tags_match=\"all_strict\")",
+            "result": "matches — it has user:alice (plus more)"
+          },
+          {
+            "code": "recall(tags=[\"user:alice\"],            tags_match=\"exact\")",
+            "result": "no match — it also carries team:eng"
+          },
+          {
+            "code": "recall(tags=[\"user:alice\",\"team:eng\"], tags_match=\"exact\")",
+            "result": "matches — tags line up exactly"
+          }
+        ],
+        "caption": "Sharper across 0.8.3: exact tag matching, better Chinese time-expression parsing, and recency that falls back to effective time when a timestamp is missing."
+      }
+    }
+  ],
+  "board": {
+    "kicker": "also in 0.8.3",
+    "title": "Everything else",
+    "groups": [
+      {
+        "label": "operational",
+        "items": [
+          "Async-operation & backlog gauges on /metrics",
+          "Parallel tenant migrations — faster schema upgrades",
+          "Gemini service-tier configuration",
+          "Leaner API responses — null fields omitted"
+        ]
+      },
+      {
+        "label": "fixes",
+        "items": [
+          {
+            "text": "Critical: retain-chunking fix — oversized documents no longer lose content on ingest",
+            "hot": true
+          },
+          "LiteLLM timeout hard-cap — no more indefinite hangs",
+          "Bank-config disposition & mission overlay consistency",
+          "Consolidation robustness for single-value source_fact_ids",
+          "Provider quota-reset retry deferral",
+          "Output sanitization — strips malformed tags & unclosed blocks"
+        ]
+      }
+    ]
+  }
+}

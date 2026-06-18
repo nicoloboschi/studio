@@ -1,7 +1,11 @@
 node_modules
+# Rendered output videos (commit the source, not the renders)
 out
 *.mp4
+*.mov
 .DS_Store
+# Scratch still frames used while iterating
+.capture
 # Remotion build cache
 .remotion
 # Python capture envs

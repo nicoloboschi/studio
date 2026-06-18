@@ -1,0 +1,130 @@
+{
+  "light": {
+    "htmlClass": "",
+    "body": {
+      "bg": "rgb(9, 9, 11)",
+      "color": "rgb(231, 233, 238)",
+      "font": "Inter, ui-sans-serif, system-ui, sans-serif"
+    },
+    "vars": {
+      "--background": "rgb(231, 233, 238)",
+      "--foreground": "rgb(231, 233, 238)",
+      "--card": "rgb(231, 233, 238)",
+      "--card-foreground": "rgb(231, 233, 238)",
+      "--popover": "rgb(231, 233, 238)",
+      "--primary": "rgb(231, 233, 238)",
+      "--primary-foreground": "rgb(231, 233, 238)",
+      "--secondary": "rgb(231, 233, 238)",
+      "--muted": "rgb(231, 233, 238)",
+      "--muted-foreground": "rgb(231, 233, 238)",
+      "--accent": "rgb(231, 233, 238)",
+      "--accent-foreground": "rgb(231, 233, 238)",
+      "--destructive": "rgb(231, 233, 238)",
+      "--border": "rgb(231, 233, 238)",
+      "--input": "rgb(231, 233, 238)",
+      "--ring": "rgb(231, 233, 238)",
+      "--radius": "rgb(231, 233, 238)",
+      "--chart-1": "rgb(231, 233, 238)",
+      "--chart-2": "rgb(231, 233, 238)",
+      "--chart-3": "rgb(231, 233, 238)",
+      "--chart-4": "rgb(231, 233, 238)",
+      "--chart-5": "rgb(231, 233, 238)",
+      "--sidebar": "rgb(231, 233, 238)",
+      "--sidebar-primary": "rgb(231, 233, 238)",
+      "--sidebar-accent": "rgb(231, 233, 238)"
+    },
+    "card": null,
+    "button": {
+      "bg": "rgba(0, 0, 0, 0)",
+      "color": "rgb(240, 97, 109)",
+      "border": "rgba(240, 97, 109, 0.35)",
+      "radius": "8px",
+      "shadow": "none",
+      "font": "Inter, ui-sans-serif, system-ui, sans-serif",
+      "weight": "600"
+    },
+    "heading": null,
+    "mono": null,
+    "palette": {
+      "links": [
+        "rgb(51, 150, 232)"
+      ],
+      "buttons": [
+        "rgba(0, 0, 0, 0) | rgb(240, 97, 109)",
+        "rgba(0, 0, 0, 0) | rgb(231, 233, 238)",
+        "rgba(0, 0, 0, 0) | rgb(255, 255, 255)"
+      ],
+      "svg": [],
+      "gradients": [
+        "linear-gradient(135deg, rgb(0, 116, 217) 0%, rgb(0, 146, 150) 100%)",
+        "linear-gradient(90deg, rgba(0, 116, 217, 0.16), rgba(0, 146, 150, 0.04))"
+      ],
+      "borders": []
+    }
+  },
+  "dark": {
+    "htmlClass": "dark",
+    "body": {
+      "bg": "rgb(9, 9, 11)",
+      "color": "rgb(231, 233, 238)",
+      "font": "Inter, ui-sans-serif, system-ui, sans-serif"
+    },
+    "vars": {
+      "--background": "rgb(231, 233, 238)",
+      "--foreground": "rgb(231, 233, 238)",
+      "--card": "rgb(231, 233, 238)",
+      "--card-foreground": "rgb(231, 233, 238)",
+      "--popover": "rgb(231, 233, 238)",
+      "--primary": "rgb(231, 233, 238)",
+      "--primary-foreground": "rgb(231, 233, 238)",
+      "--secondary": "rgb(231, 233, 238)",
+      "--muted": "rgb(231, 233, 238)",
+      "--muted-foreground": "rgb(231, 233, 238)",
+      "--accent": "rgb(231, 233, 238)",
+      "--accent-foreground": "rgb(231, 233, 238)",
+      "--destructive": "rgb(231, 233, 238)",
+      "--border": "rgb(231, 233, 238)",
+      "--input": "rgb(231, 233, 238)",
+      "--ring": "rgb(231, 233, 238)",
+      "--radius": "rgb(231, 233, 238)",
+      "--chart-1": "rgb(231, 233, 238)",
+      "--chart-2": "rgb(231, 233, 238)",
+      "--chart-3": "rgb(231, 233, 238)",
+      "--chart-4": "rgb(231, 233, 238)",
+      "--chart-5": "rgb(231, 233, 238)",
+      "--sidebar": "rgb(231, 233, 238)",
+      "--sidebar-primary": "rgb(231, 233, 238)",
+      "--sidebar-accent": "rgb(231, 233, 238)"
+    },
+    "card": null,
+    "button": {
+      "bg": "rgba(0, 0, 0, 0)",
+      "color": "rgb(240, 97, 109)",
+      "border": "rgba(240, 97, 109, 0.35)",
+      "radius": "8px",
+      "shadow": "none",
+      "font": "Inter, ui-sans-serif, system-ui, sans-serif",
+      "weight": "600"
+    },
+    "heading": null,
+    "mono": null,
+    "palette": {
+      "links": [
+        "rgb(51, 150, 232)"
+      ],
+      "buttons": [
+        "rgba(0, 0, 0, 0) | rgb(240, 97, 109)",
+        "rgba(0, 0, 0, 0) | rgb(231, 233, 238)",
+        "rgba(0, 0, 0, 0) | rgb(255, 255, 255)"
+      ],
+      "svg": [],
+      "gradients": [
+        "linear-gradient(135deg, rgb(0, 116, 217) 0%, rgb(0, 146, 150) 100%)",
+        "linear-gradient(90deg, rgba(0, 116, 217, 0.16), rgba(0, 146, 150, 0.04))"
+      ],
+      "borders": []
+    }
+  },
+  "url": "http://localhost:7878/?profile=desktop",
+  "radiusRaw": ""
+}

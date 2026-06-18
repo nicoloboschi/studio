@@ -1,0 +1,154 @@
+{
+  "version": "0.8.2",
+  "date": "June 12, 2026",
+  "kicker": "release notes",
+  "tagline": "Production-grade memory — defense, reversible curation, and scopes.",
+  "blogUrl": "hindsight.vectorize.io/blog/2026/06/12/version-0-8-2",
+  "docsUrl": "docs.hindsight.vectorize.io",
+  "features": [
+    {
+      "category": "security",
+      "title": "Memory Defense",
+      "summary": "Scrub secrets & PII out of memory — before the agent ever stores them.",
+      "example": {
+        "kind": "config-redact",
+        "codeTitle": "bank config",
+        "code": "{\n  \"memory_defense\": {\n    \"enabled\": true,\n    \"rules\": [{ \"on\": \"sensitive_data\", \"action\": \"redact\" }]\n  }\n}",
+        "beforeLabel": "agent writes",
+        "before": "prod DB postgres://svc:s3cr3t@10.0.0.4/main · key sk-ant-api03-9f4c2a",
+        "afterLabel": "Hindsight stores",
+        "after": "prod DB postgres://svc:[REDACTED:password]@10.0.0.4/main · key [REDACTED:api_key]",
+        "caption": "44 built-in patterns. action \"block\" drops the item entirely; a memory_defense.triggered webhook logs what matched."
+      }
+    },
+    {
+      "category": "curation",
+      "title": "Reversible Memory Curation",
+      "summary": "Fix or retire a memory — and never lose the ability to undo it.",
+      "example": {
+        "kind": "curation-actions",
+        "actions": [
+          {
+            "verb": "edit",
+            "desc": "correct a memory in place",
+            "before": "Deadline is March 31.",
+            "after": "Deadline is April 15.",
+            "note": "same memory, updated — flagged as edited"
+          },
+          {
+            "verb": "invalidate",
+            "desc": "drop it from recall, reversibly",
+            "before": "We use Postgres 14.",
+            "beforeStrike": true,
+            "after": "no longer surfaces in recall",
+            "note": "kept aside, not deleted — restore anytime"
+          }
+        ],
+        "caption": "Nothing is hard-deleted: edits stay visible as edits, and an invalidated memory can always be restored."
+      }
+    },
+    {
+      "category": "context",
+      "title": "Observation Scopes",
+      "summary": "Consolidate memory per tag — so each subject is queryable on its own.",
+      "example": {
+        "kind": "scopes-table",
+        "setupLine": "One lesson retained with three tags — observation_scopes decides how it consolidates:",
+        "setupTags": [
+          "student:alice",
+          "teacher:bob",
+          "session-id:s1"
+        ],
+        "modes": [
+          {
+            "name": "combined",
+            "tag": "default",
+            "built": "one obs: [alice · bob · s1]",
+            "answers": "“what happened in session s1?”"
+          },
+          {
+            "name": "shared",
+            "built": "one global obs: [ ]",
+            "answers": "matches every recall — tags ignored"
+          },
+          {
+            "name": "per_tag",
+            "highlight": true,
+            "built": "[alice]  [bob]  [s1]",
+            "answers": "“what does Alice struggle with, across sessions?”"
+          },
+          {
+            "name": "all_combinations",
+            "built": "per_tag + every pair + the triple",
+            "answers": "“how does Alice do with Bob specifically?”"
+          },
+          {
+            "name": "custom",
+            "built": "only the tag-sets you pass",
+            "answers": "exactly the combinations you choose"
+          }
+        ],
+        "recalls": [
+          {
+            "code": "recall(query=\"what does Alice struggle with?\", tags=[\"student:alice\"])",
+            "result": "“…recursion, across every session.”"
+          },
+          {
+            "code": "recall(query=\"how does Bob teach?\",            tags=[\"teacher:bob\"])",
+            "result": "“…works through optimizations step by step.”"
+          },
+          {
+            "code": "recall(query=\"what happened in s1?\",           tags=[\"session-id:s1\"])",
+            "result": "“…Bob explained tail-call optimization.”"
+          }
+        ],
+        "caption": "Each scope is an independent consolidation pass with all_strict tag isolation — recall with the tags whose observation you want."
+      }
+    },
+    {
+      "category": "deploy",
+      "title": "Local Control Center",
+      "summary": "A built-in web app to run & configure your local instance — no separate service.",
+      "example": {
+        "kind": "ui-shot",
+        "image": "captures/control-center.png",
+        "url": "localhost:7878 · control center",
+        "bullets": [
+          "Start, stop & restart the API and control plane",
+          "Configure provider, model, keys & ports",
+          "Browse files and tail live logs"
+        ],
+        "caption": "Real screenshot — launch it with hindsight-embed control; embedded deployments now bundle this web app, no separate service to run."
+      }
+    }
+  ],
+  "board": {
+    "kicker": "also in 0.8.2",
+    "title": "Everything else",
+    "groups": [
+      {
+        "label": "providers & models",
+        "items": [
+          "Native Nous Portal with built-in OAuth",
+          "Gemini Batch API for fact extraction",
+          "Gemini embedding-2 model family",
+          "Per-bank cost attribution — HINDSIGHT_API_LLM_SEND_BANK_AS_USER=true",
+          "Per-bank LLM connectivity checks",
+          "Amazon Bedrock service-tier selection"
+        ]
+      },
+      {
+        "label": "reliability & fixes",
+        "items": [
+          "Reliable cancellation of abandoned recall / reflect",
+          "Torch dtype consistency under concurrency",
+          "Higher-fidelity reflect synthesis",
+          "JSONL line-boundary chunking on ingest",
+          "Postgres history column widened for longer bank IDs",
+          "Safer rolling-deployment migrations"
+        ]
+      }
+    ],
+    "highlight": "Export a bank's memory constellation as a shareable SVG poster."
+  }
+}

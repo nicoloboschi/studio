@@ -7,29 +7,33 @@ truth; [`design.ts`](./design.ts) is its machine-readable implementation (the `D
 > Vibe: calm, technical, trustworthy. Dark "engineering console" aesthetic — like looking at a clean
 > terminal at night. Let whitespace and one accent gradient do the work; never more than one idea per
 > screen.
+>
+> **These tokens mirror the real Hindsight product UI** (the Embed Control Center / Control Plane),
+> extracted live from its CSS so videos read as an *extension of the product*, not a separate brand.
+> When the product restyles, re-extract with `release-notes/capture/control-center-shot.mjs` (it writes
+> `ui-tokens.json`) and update this file + `design.ts` together.
 
-## Palette
+## Palette (matched to the product)
 
 | Token | Hex | Use |
 |-------|-----|-----|
-| `bg` / `bg2` | `#0B1020` / `#111935` | Page background (radial wash, brighter top-right). |
-| `panel` | `#0E1530` | Cards, boxes. |
-| `panelBorder` | `#26314f` | 1px borders / hairlines. |
-| `text` | `#E8ECF8` | Primary text. |
-| `dim` | `#8A95B5` | Secondary text, captions. |
-| `faint` | `#5B658A` | Labels, terminal chrome, "+N more". |
-| `accent` | `#6E8BFF` (indigo) | Primary brand, product name, step badges. |
-| `accent2` | `#22D3EE` (cyan) | Secondary highlight, kickers, the brand gradient's far end. |
-| `good` / `amber` / `bad` | `#34D399` / `#FBBF24` / `#FB7185` | Success / partial / fail & "before". |
+| `bg` / `bg2` | `#09090B` / `#15151A` | Page background (product near-black + faint radial lift). |
+| `panel` | `#141417` | Cards, code blocks, terminal bodies (product code surface). |
+| `panelBorder` | `#27272A` | 1px borders / hairlines (zinc-800). |
+| `text` | `#E7E9EE` | Primary text (product foreground). |
+| `dim` | `#A1A1AA` | Secondary text, captions (zinc-400). |
+| `faint` | `#71717A` | Labels, chrome, hints (zinc-500). |
+| `accent` | `#3396E8` (blue) | Product/brand, links, kickers' partner, code keys. |
+| `accent2` | `#00A6A6` (teal) | Secondary highlight, kickers, the brand gradient's far end. |
+| `good` / `amber` / `bad` | `#34D399` / `#FBBF24` / `#F0616D` | Success / partial / fail (`bad` = product destructive). |
 
-**Brand gradient:** `linear-gradient(90deg, accent → accent2)` — reserved for the product name and
-hero numbers only. Don't gradient body text.
+**Brand gradient:** `linear-gradient(→, accent → accent2)` = the product's blue→teal
+(`#0074D9 → #009296`) — reserved for the product name and hero numbers only. Don't gradient body text.
 
-## Type
+## Type (the product's fonts)
 
-- **Sans** (`system-ui`) — all prose: titles, captions, fact text, golden set.
-- **Mono** (`SF Mono`/`JetBrains Mono`) — anything "machine": terminal, commands, numbers, kickers,
-  coverage values, chips.
+- **Sans** = **Inter** — all prose: titles, captions, fact text. (loaded in `src/lib/fonts.ts`)
+- **Mono** = **JetBrains Mono** — anything "machine": terminal, commands, numbers, kickers, code, chips.
 - Rough scale (1920×1080): hero `96–120`, scene title `50`, body/sub `30–36`, fact/list `25–29`,
   labels/kickers `20–26`. Line-height `1.1` for heroes, `1.4–1.5` for prose.
 

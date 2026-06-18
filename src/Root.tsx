@@ -1,6 +1,7 @@
 import React from "react";
 import { Composition } from "remotion";
 import { MissionSandboxVideo, missionSandboxMeta } from "../hindsight/mission-sandbox/Video";
+import { ReleaseNotesVideo, releaseNotesMeta } from "../hindsight/release-notes/Video";
 
 /**
  * Register every video here as a <Composition>. Convention: composition id is
@@ -16,6 +17,14 @@ export const Root: React.FC = () => (
       fps={missionSandboxMeta.fps}
       width={missionSandboxMeta.width}
       height={missionSandboxMeta.height}
+    />
+    <Composition
+      id={releaseNotesMeta.id}
+      component={ReleaseNotesVideo}
+      durationInFrames={releaseNotesMeta.durationInFrames}
+      fps={releaseNotesMeta.fps}
+      width={releaseNotesMeta.width}
+      height={releaseNotesMeta.height}
     />
   </>
 );

@@ -1,14 +1,22 @@
-"""Capture REAL extraction output for the mission-sandbox demo video.
+"""Capture REAL data for the mission-sandbox demo video.
 
-Mirrors what the dry-run-extract endpoint does internally: calls the engine's
-extract_facts_from_text with a BASELINE vs a REFINED retain mission over a small,
-realistic (non-LOCOMO) dataset, then scores golden coverage with a real Gemini judge.
-Writes demo-data.json for the Remotion composition. No DB, no server.
+Narrative: a user never has a hand-curated "golden set" of facts. What they have is an EVAL — their
+app's real questions, and whether the memory lets the app answer them. So this:
+
+  1. Extracts facts from the user's notes with a NARROW vs a REFINED retain mission (the engine's
+     extract_facts_from_text — what the dry-run endpoint runs internally). Those facts ARE the memory.
+  2. Runs the user's eval: for each question, the "app" answers using ONLY what got remembered
+     (or admits it can't), then a judge scores it against the expected answer.
+
+The eval score (answer quality from recall) is the success metric — not fact-checking.
+Real Gemini throughout. No DB, no server. Writes ../data.json.
 """
 
 import asyncio
 import json
 import os
+import re
+import time
 from datetime import datetime
 
 import hindsight_api.config as _cfg  # noqa: F401  (import triggers load_dotenv)
@@ -21,7 +29,7 @@ from hindsight_api.config import _get_raw_config  # noqa: E402
 from hindsight_api.engine.llm_wrapper import LLMConfig  # noqa: E402
 from hindsight_api.engine.retain.fact_extraction import extract_facts_from_text  # noqa: E402
 
-NARRATOR = ""
+MODEL = "gemini-2.5-flash"
 
 DOCS = [
     {
@@ -46,15 +54,15 @@ DOCS = [
     },
 ]
 
-GOLDEN = [
-    "Maya is a senior product designer at Lumen Labs.",
-    "Maya relocated from Seattle to Austin around April 2024.",
-    "Maya adopted a rescue greyhound named Pixel.",
-    "Maya's favorite weekend activity is taking Pixel to Zilker Park on Saturday mornings.",
-    "Maya signed up for a beginner pottery class because she always wanted to try it.",
-    "Maya led and shipped the onboarding redesign at Lumen Labs (June 2024).",
-    "Maya booked a solo trip to Lisbon in September 2024 to see the architecture and tilework.",
-    "Maya switched to oat milk because dairy upsets her stomach.",
+# The user's EVAL: the real questions their assistant must answer from memory (+ expected answers
+# the eval grades against). This is what they actually have — not a list of "correct facts".
+EVAL = [
+    {"q": "What does Maya do for work, and where?", "expected": "Senior product designer at Lumen Labs."},
+    {"q": "Which city does Maya live in now?", "expected": "Austin."},
+    {"q": "Does Maya have any pets?", "expected": "Yes — a rescue greyhound named Pixel."},
+    {"q": "What new hobby is Maya taking up?", "expected": "Pottery (a beginner class)."},
+    {"q": "Does Maya have any trips planned?", "expected": "A solo trip to Lisbon in September 2024."},
+    {"q": "Any recent change to Maya's diet?", "expected": "She switched to oat milk."},
 ]
 
 BASELINE_MISSION = (
@@ -70,86 +78,100 @@ REFINED_MISSION = (
 )
 
 
-async def extract_for_mission(mission: str) -> dict:
+def mayaize(s: str) -> str:
+    """First-person journal → no narrator → facts say 'the user'. Name her Maya so the memory,
+    the eval questions, and the on-screen text all refer to the same person."""
+    s = re.sub(r"\bthe user's\b", "Maya's", s, flags=re.I)
+    s = re.sub(r"\bthe user\b", "Maya", s, flags=re.I)
+    s = re.sub(r"\bUser\b", "Maya", s)
+    s = re.sub(r"\btheir\b", "her", s, flags=re.I)
+    s = re.sub(r"\bthem\b", "her", s, flags=re.I)
+    s = re.sub(r"\bthey\b", "she", s, flags=re.I)
+    return s
+
+
+def _gen(client: genai.Client, **kw):
+    """generate_content with a small retry on transient Gemini 5xx/429."""
+    for attempt in range(5):
+        try:
+            return client.models.generate_content(**kw)
+        except Exception as e:  # noqa: BLE001
+            msg = str(e)
+            transient = any(c in msg for c in ("503", "500", "429", "UNAVAILABLE", "overloaded"))
+            if not transient or attempt == 4:
+                raise
+            time.sleep(2**attempt)
+
+
+async def extract_for_mission(mission: str) -> list[dict]:
     llm_config = LLMConfig.from_env()
     config = _get_raw_config()
     config.retain_mission = mission
     facts: list[dict] = []
-    in_tok = out_tok = 0
     for doc in DOCS:
-        result_facts, _chunks, usage = await extract_facts_from_text(
+        result_facts, _chunks, _usage = await extract_facts_from_text(
             text=doc["text"],
             event_date=datetime.fromisoformat(doc["date"]),
             llm_config=llm_config,
-            agent_name=NARRATOR,
+            agent_name="",
             config=config,
             context="Personal journal note",
         )
-        in_tok += usage.input_tokens
-        out_tok += usage.output_tokens
         for f in result_facts:
-            facts.append(
-                {
-                    "doc": doc["id"],
-                    "text": f.fact,
-                    "fact_type": f.fact_type,
-                    "occurred_start": f.occurred_start,
-                    "entities": [e.text for e in (f.entities or []) if getattr(e, "text", None)],
-                }
-            )
-    return {"mission": mission, "facts": facts, "usage": {"input": in_tok, "output": out_tok}}
+            facts.append({"text": mayaize(f.fact)})
+    return facts
 
 
-def score_coverage(client: genai.Client, facts: list[dict]) -> dict:
-    """Real Gemini coverage judge — which golden facts are reproduced by the candidate set."""
-    golden_list = "\n".join(f"[{i}] {g}" for i, g in enumerate(GOLDEN))
-    cand = "\n".join(f"- {f['text']}" for f in facts) or "(none)"
-    resp = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=(
-            f"GOLDEN facts (the target):\n{golden_list}\n\n"
-            f"CANDIDATE facts (what a mission extracted):\n{cand}\n\n"
-            "Return the indices of GOLDEN facts whose information is present in the CANDIDATE set "
-            "(allow paraphrase/different wording), and the texts of the missing ones."
-        ),
-        config={
-            "temperature": 0,
-            "response_mime_type": "application/json",
-            "response_schema": {
-                "type": "OBJECT",
-                "properties": {
-                    "coveredIndices": {"type": "ARRAY", "items": {"type": "INTEGER"}},
-                    "missing": {"type": "ARRAY", "items": {"type": "STRING"}},
-                },
-                "required": ["coveredIndices", "missing"],
+def run_eval(client: genai.Client, facts: list[dict]) -> list[dict]:
+    """The user's eval: answer each question from memory only, then judge vs the expected answer."""
+    memory = "\n".join(f"- {f['text']}" for f in facts) or "(memory is empty)"
+    results = []
+    for item in EVAL:
+        ans = _gen(
+            client,
+            model=MODEL,
+            contents=(
+                f"You are an AI assistant answering from your long-term memory of the user.\n"
+                f"Everything you remember:\n{memory}\n\n"
+                f"Question: {item['q']}\n"
+                "Answer in one short sentence using ONLY the memories above. "
+                "If the answer is not in your memory, reply exactly: I don't have that in my memory."
+            ),
+            config={"temperature": 0},
+        ).text.strip()
+        verdict = _gen(
+            client,
+            model=MODEL,
+            contents=(
+                f"Question: {item['q']}\nExpected answer: {item['expected']}\n"
+                f"Assistant's answer: {ans}\n\n"
+                "Grade leniently. The answer is CORRECT if it conveys the key information in the expected "
+                "answer — extra detail, paraphrase, or a missing minor specific (e.g. the exact year) is "
+                "fine. It is INCORRECT only if it is wrong, omits the key information, or says it doesn't "
+                "have the information in memory."
+            ),
+            config={
+                "temperature": 0,
+                "response_mime_type": "application/json",
+                "response_schema": {"type": "OBJECT", "properties": {"correct": {"type": "BOOLEAN"}}, "required": ["correct"]},
             },
-        },
-    )
-    parsed = json.loads(resp.text)
-    covered = sorted(set(parsed.get("coveredIndices", [])))
-    return {"covered": covered, "missing": parsed.get("missing", []), "total": len(GOLDEN)}
+        ).text
+        correct = bool(json.loads(verdict).get("correct"))
+        results.append({"q": item["q"], "answer": ans, "correct": correct})
+    return results
 
 
 async def main() -> None:
     client = genai.Client(api_key=os.environ["HINDSIGHT_API_LLM_API_KEY"])
-    print("Extracting with BASELINE mission…")
-    baseline = await extract_for_mission(BASELINE_MISSION)
-    baseline["coverage"] = score_coverage(client, baseline["facts"])
-    print(f"  baseline: {len(baseline['facts'])} facts, coverage {len(baseline['coverage']['covered'])}/{len(GOLDEN)}")
+    out = {"documents": DOCS, "evalQuestions": [e["q"] for e in EVAL]}
+    for name, mission in (("baseline", BASELINE_MISSION), ("refined", REFINED_MISSION)):
+        print(f"Extracting + evaluating: {name}…")
+        facts = await extract_for_mission(mission)
+        results = run_eval(client, facts)
+        score = sum(1 for r in results if r["correct"])
+        out[name] = {"mission": mission, "facts": facts, "eval": results, "score": score, "total": len(EVAL)}
+        print(f"  {name}: {len(facts)} facts in memory, eval {score}/{len(EVAL)}")
 
-    print("Extracting with REFINED mission…")
-    refined = await extract_for_mission(REFINED_MISSION)
-    refined["coverage"] = score_coverage(client, refined["facts"])
-    print(f"  refined: {len(refined['facts'])} facts, coverage {len(refined['coverage']['covered'])}/{len(GOLDEN)}")
-
-    out = {
-        "narrator": NARRATOR,
-        "documents": DOCS,
-        "golden": GOLDEN,
-        "baseline": baseline,
-        "refined": refined,
-    }
-    # Write next to the video folder: hindsight/mission-sandbox/data.json
     path = os.path.join(os.path.dirname(__file__), "..", "data.json")
     with open(path, "w") as fh:
         json.dump(out, fh, indent=2)

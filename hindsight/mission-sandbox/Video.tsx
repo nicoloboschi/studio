@@ -1,352 +1,340 @@
 import React from "react";
-import { AbsoluteFill, Sequence, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { DesignProvider, useDesign } from "../../src/lib/design";
-import { Appear, Bg, Chip, CoverageMeter, FactCard, GoldenRow, SceneTitle, TerminalWindow, Typed } from "../../src/lib/components";
+import { Appear, Bg, TerminalWindow, Typed } from "../../src/lib/components";
 import { hindsight } from "../design";
 import data from "./data.json";
 
 const D = data as unknown as {
-  documents: { id: string; date: string; text: string }[];
-  golden: string[];
-  baseline: { mission: string; facts: { text: string }[]; coverage: { covered: number[]; total: number } };
-  refined: { mission: string; facts: { text: string }[]; coverage: { covered: number[]; total: number } };
+  documents: { date: string; text: string }[];
+  questions: { ask: string; v1: string; v1ok: boolean; v2: string; v2ok: boolean }[];
+  baselineMission: string;
+  refinedMission: string;
+  feedback: string;
+  scores: { v1: number; v2: number; total: number };
 };
 
-// The extractor labels the speaker "the user"; the golden set names her "Maya".
-// Normalize to "Maya" so the two sides of the screen read consistently.
-const mayaize = (s: string) =>
+const FPS = 30;
+
+// Real answers are third-person ("Maya …"); show them as the assistant speaking to its user ("You …").
+const youify = (s: string) =>
   s
-    .replace(/\bthe user's\b/gi, "Maya's")
-    .replace(/\bthe user\b/gi, "Maya")
-    .replace(/\bUser\b/g, "Maya")
-    .replace(/\btheir\b/gi, "her")
-    .replace(/\bthem\b/gi, "her")
-    .replace(/\bthey\b/gi, "she");
+    .replace(/\bMaya is\b/g, "You're")
+    .replace(/\bMaya's\b/g, "your")
+    .replace(/\bMaya\b/g, "you")
+    .replace(/\bher\b/g, "your")
+    .replace(/^you\b/, "You")
+    .replace(/(\. )you\b/g, "$1You");
 
-const head = (s: string) => mayaize(s.split(" | ")[0]);
-const baseFacts = D.baseline.facts.map((f) => head(f.text));
-const refFacts = D.refined.facts.map((f) => head(f.text));
-const baseCovered = new Set(D.baseline.coverage.covered);
-const refCovered = new Set(D.refined.coverage.covered);
-
-const Big: React.FC<{ children: React.ReactNode; size?: number; color?: string }> = ({ children, size = 76, color }) => {
+const Big: React.FC<{ children: React.ReactNode; size?: number; color?: string }> = ({ children, size = 80, color }) => {
   const t = useDesign();
-  return <div style={{ fontSize: size, fontWeight: 800, color: color ?? t.text, lineHeight: 1.1 }}>{children}</div>;
+  return <div style={{ fontSize: size, fontWeight: 800, color: color ?? t.text, lineHeight: 1.12 }}>{children}</div>;
 };
 
-const Sub: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// ---- one chat exchange (user question + assistant answer with ✓/✗) ----
+const Exchange: React.FC<{ ask: string; answer: string; ok: boolean; delay: number; compact?: boolean }> = ({
+  ask,
+  answer,
+  ok,
+  delay,
+  compact,
+}) => {
   const t = useDesign();
-  return <div style={{ fontSize: 36, color: t.dim, lineHeight: 1.4, maxWidth: 1300 }}>{children}</div>;
+  const frame = useCurrentFrame();
+  const q = spring({ frame: frame - delay, fps: FPS, config: { damping: 200 } });
+  const a = spring({ frame: frame - delay - 10, fps: FPS, config: { damping: 200 } });
+  const fs = compact ? 25 : 28;
+  return (
+    <div style={{ marginBottom: compact ? 16 : 22 }}>
+      {/* user bubble (right) */}
+      <div style={{ display: "flex", justifyContent: "flex-end", opacity: q, transform: `translateY(${(1 - q) * 10}px)` }}>
+        <div style={{ background: t.bg2, border: `1px solid ${t.panelBorder}`, color: t.text, borderRadius: "14px 14px 4px 14px", padding: "10px 16px", fontSize: fs, maxWidth: "82%" }}>
+          {ask}
+        </div>
+      </div>
+      {/* assistant bubble (left) */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginTop: 8, opacity: a, transform: `translateY(${(1 - a) * 10}px)` }}>
+        <div
+          style={{
+            background: t.panel,
+            border: `1px solid ${ok ? t.good + "66" : t.bad + "55"}`,
+            borderLeft: `4px solid ${ok ? t.good : t.bad}`,
+            color: ok ? t.text : t.dim,
+            borderRadius: "14px 14px 14px 4px",
+            padding: "10px 16px",
+            fontSize: fs,
+            maxWidth: "88%",
+            display: "flex",
+            gap: 10,
+            alignItems: "baseline",
+          }}
+        >
+          <span style={{ color: ok ? t.good : t.bad, fontWeight: 800 }}>{ok ? "✓" : "✗"}</span>
+          <span>{answer}</span>
+        </div>
+      </div>
+    </div>
+  );
 };
 
-// ============ 1. Hook — the problem ============
-const Hook: React.FC = () => {
+// ---- the assistant chat panel: the eval, experienced as a conversation ----
+const ChatPanel: React.FC<{ version: "v1" | "v2"; startDelay?: number }> = ({ version, startDelay = 0 }) => {
+  const t = useDesign();
+  return (
+    <div style={{ background: "rgba(8,12,26,0.55)", border: `1px solid ${t.panelBorder}`, borderRadius: 16, padding: "22px 24px", height: 880, overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <div style={{ width: 12, height: 12, borderRadius: "50%", background: t.good }} />
+        <span style={{ color: t.faint, fontFamily: t.mono, fontSize: 22 }}>your assistant</span>
+      </div>
+      {D.questions.map((qq, i) => (
+        <Exchange
+          key={i}
+          ask={qq.ask}
+          answer={version === "v1" ? (qq.v1ok ? youify(qq.v1) : qq.v1) : youify(qq.v2)}
+          ok={version === "v1" ? qq.v1ok : qq.v2ok}
+          delay={startDelay + i * 14}
+          compact
+        />
+      ))}
+    </div>
+  );
+};
+
+const ScoreChip: React.FC<{ score: number; total: number; delay: number; label: string }> = ({ score, total, delay, label }) => {
+  const t = useDesign();
+  const frame = useCurrentFrame();
+  const g = spring({ frame: frame - delay, fps: FPS, config: { damping: 200, mass: 1.1 } });
+  const shown = Math.round(score * g);
+  const color = score >= total ? t.good : score > 0 ? t.amber : t.bad;
+  return (
+    <div style={{ opacity: g, marginTop: 18, display: "flex", alignItems: "center", gap: 16 }}>
+      <span style={{ color: t.dim, fontFamily: t.sans, fontSize: 26 }}>{label}</span>
+      <span style={{ fontFamily: t.mono, fontSize: 40, fontWeight: 800, color, background: `${color}1a`, border: `1px solid ${color}66`, borderRadius: 12, padding: "4px 18px" }}>
+        {shown}/{total}
+      </span>
+    </div>
+  );
+};
+
+const Caption: React.FC<{ delay?: number; children: React.ReactNode; color?: string }> = ({ delay = 0, children, color }) => {
+  const t = useDesign();
+  return (
+    <Appear delay={delay}>
+      <div style={{ position: "absolute", bottom: 30, left: 80, right: 80, textAlign: "center", fontSize: 30, color: color ?? t.dim, fontWeight: 600 }}>
+        {children}
+      </div>
+    </Appear>
+  );
+};
+
+// ============ 1. Pain ============
+const Pain: React.FC = () => {
   const t = useDesign();
   return (
     <Bg>
-      <AbsoluteFill style={{ justifyContent: "center", padding: "0 130px", gap: 26 }}>
+      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", padding: "0 200px" }}>
         <Appear delay={2}>
-          <Big size={96}>AI agents forget.</Big>
+          <Big size={70} color={t.text}>
+            Your AI assistant should know you.
+          </Big>
         </Appear>
-        <Appear delay={26}>
-          <Sub>Every new chat, your assistant starts from zero — unless it has long-term memory.</Sub>
+        <Appear delay={20}>
+          <div style={{ marginTop: 10, fontSize: 44, color: t.bad, fontWeight: 800 }}>This one doesn’t.</div>
         </Appear>
-        <Appear delay={70}>
-          <div style={{ marginTop: 20, fontSize: 38, color: t.text }}>
-            <span style={{ color: t.accent }}>Hindsight</span> gives agents memory: it reads each conversation and
-            <span style={{ color: t.accent2 }}> extracts durable facts</span> to remember.
-          </div>
-        </Appear>
+        <div style={{ marginTop: 52, width: 980 }}>
+          <Exchange ask="Hey — do I have any pets?" answer="I don’t have that in my memory." ok={false} delay={48} />
+        </div>
       </AbsoluteFill>
     </Bg>
   );
 };
 
-// ============ 2. The catch — retain mission steers extraction ============
-const Catch: React.FC = () => {
+// ============ the source: Maya's notes ============
+const Notes: React.FC = () => {
   const t = useDesign();
-  const frame = useCurrentFrame();
-  const rows = [
-    { text: "Maya adopted a dog named Pixel", keep: false },
-    { text: "Maya is a product designer at Lumen Labs", keep: true },
-    { text: "Maya is planning a trip to Lisbon", keep: false },
-  ];
   return (
     <Bg>
-      <div style={{ padding: "70px 130px" }}>
-        <SceneTitle kicker="the catch" title="What it remembers is steered by a “retain mission”" />
-        <Appear delay={16}>
-          <Sub>
-            A <b style={{ color: t.text }}>retain mission</b> is just plain-English instructions telling the extractor
-            what matters. Make it too narrow…
-          </Sub>
+      <div style={{ padding: "60px 120px" }}>
+        <Appear>
+          <div style={{ color: t.accent2, fontFamily: t.mono, fontSize: 26, letterSpacing: 2, textTransform: "uppercase" }}>the source</div>
+          <Big size={52}>But Maya told her assistant all of this</Big>
         </Appear>
-        <div style={{ display: "flex", alignItems: "center", gap: 40, marginTop: 60 }}>
-          <Appear delay={36}>
-            <div style={{ background: t.panel, border: `1px solid ${t.panelBorder}`, borderRadius: 14, padding: "22px 24px", width: 520 }}>
-              <div style={{ color: t.faint, fontFamily: t.mono, fontSize: 22, marginBottom: 8 }}>retain mission</div>
-              <div style={{ fontSize: 28, color: t.text, lineHeight: 1.4 }}>“Only record the person’s job.”</div>
-            </div>
-          </Appear>
-          <Appear delay={52}>
-            <div style={{ fontSize: 60, color: t.faint }}>→</div>
-          </Appear>
-          <div style={{ flex: 1 }}>
-            {rows.map((d, i) => {
-              const fade = interpolate(frame, [70 + i * 12, 95 + i * 12], [1, d.keep ? 1 : 0.28], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              });
-              return (
-                <Appear key={i} delay={60 + i * 10}>
-                  <div
-                    style={{
-                      opacity: fade,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 14,
-                      background: t.panel,
-                      border: `1px solid ${d.keep ? t.good + "66" : t.panelBorder}`,
-                      borderLeft: `4px solid ${d.keep ? t.good : t.bad}`,
-                      borderRadius: 10,
-                      padding: "14px 18px",
-                      marginBottom: 12,
-                      fontSize: 27,
-                    }}
-                  >
-                    <span style={{ color: d.keep ? t.good : t.bad, fontWeight: 800 }}>{d.keep ? "✓" : "✗"}</span>
-                    <span style={{ color: d.keep ? t.text : t.dim }}>{d.text}</span>
-                  </div>
-                </Appear>
-              );
-            })}
-          </div>
-        </div>
-        <Appear delay={104}>
-          <div style={{ marginTop: 30, fontSize: 34, color: t.bad }}>
-            …and your agent <b>silently forgets</b> things the user actually told it.
+        <Appear delay={12}>
+          <div style={{ fontSize: 30, color: t.dim, marginTop: 10 }}>
+            Three notes over a few months — everything the agent had to remember.
           </div>
         </Appear>
-      </div>
-    </Bg>
-  );
-};
-
-// ============ 3. The tool — what mission-sandbox does ============
-const Concept: React.FC = () => {
-  const t = useDesign();
-  const steps = [
-    { n: "1", h: "Write the golden set", d: "the facts you’ve decided the agent must remember" },
-    { n: "2", h: "Test a mission (dry run)", d: "real extraction on your notes — nothing is stored" },
-    { n: "3", h: "Read the coverage", d: "how many golden facts the mission actually captured" },
-  ];
-  return (
-    <Bg>
-      <div style={{ padding: "70px 130px" }}>
-        <SceneTitle kicker="the tool" title="mission-sandbox catches it before you ship" />
-        <div style={{ display: "flex", gap: 30, marginTop: 60 }}>
-          {steps.map((s, i) => (
-            <Appear key={s.n} delay={16 + i * 18} style={{ flex: 1 }}>
-              <div style={{ background: t.panel, border: `1px solid ${t.panelBorder}`, borderRadius: 16, padding: 30, height: 280 }}>
-                <div
-                  style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: 16,
-                    background: `${t.accent}22`,
-                    border: `1px solid ${t.accent}66`,
-                    color: t.accent,
-                    fontSize: 36,
-                    fontWeight: 800,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {s.n}
-                </div>
-                <div style={{ fontSize: 34, fontWeight: 700, marginTop: 22 }}>{s.h}</div>
-                <div style={{ fontSize: 27, color: t.dim, marginTop: 12, lineHeight: 1.4 }}>{s.d}</div>
+        <div style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 22 }}>
+          {D.documents.map((d, i) => (
+            <Appear key={i} delay={26 + i * 20}>
+              <div style={{ display: "flex", gap: 24, alignItems: "flex-start", background: t.panel, border: `1px solid ${t.panelBorder}`, borderRadius: 14, padding: "22px 26px" }}>
+                <span style={{ fontFamily: t.mono, fontSize: 24, color: t.accent2, background: `${t.accent2}1a`, border: `1px solid ${t.accent2}55`, borderRadius: 8, padding: "5px 12px", whiteSpace: "nowrap" }}>
+                  {d.date}
+                </span>
+                <div style={{ fontSize: 30, lineHeight: 1.42, color: t.text }}>“{d.text}”</div>
               </div>
             </Appear>
           ))}
         </div>
-        <Appear delay={84}>
-          <div style={{ marginTop: 46, fontSize: 32, color: t.accent2, textAlign: "center" }}>
-            Tune the words of the mission — not the data — and watch coverage change.
+      </div>
+    </Bg>
+  );
+};
+
+// ============ split act: chat (left) + terminal (right) ============
+const Split: React.FC<{ chat: React.ReactNode; terminal: React.ReactNode; caption?: React.ReactNode }> = ({ chat, terminal, caption }) => (
+  <Bg>
+    <div style={{ display: "flex", gap: 40, padding: "44px 70px 0" }}>
+      <div style={{ flex: 1.05 }}>{chat}</div>
+      <div style={{ flex: 1 }}>{terminal}</div>
+    </div>
+    {caption}
+  </Bg>
+);
+
+const EvalV1: React.FC = () => {
+  const t = useDesign();
+  return (
+    <Split
+      chat={<ChatPanel version="v1" startDelay={70} />}
+      terminal={
+        <div>
+          <TerminalWindow title="zsh — mission-sandbox">
+            <div style={{ fontSize: 24, color: t.text }}>
+              <span style={{ color: t.good }}>$ </span>
+              <Typed text="mission-sandbox retain apply maya" delay={6} />
+            </div>
+            <Appear delay={40}>
+              <div style={{ marginTop: 12, fontSize: 21, color: t.faint }}>ingesting 3 notes → bank maya-v1 …</div>
+            </Appear>
+            <Appear delay={56}>
+              <div style={{ marginTop: 14, fontSize: 22, color: t.accent2 }}>▸ running your eval — 6 real questions</div>
+            </Appear>
+          </TerminalWindow>
+          <ScoreChip score={D.scores.v1} total={D.scores.total} delay={230} label="eval score" />
+        </div>
+      }
+      caption={<Caption delay={250} color={t.amber}>Same notes were ingested — but the agent only kept work facts.</Caption>}
+    />
+  );
+};
+
+const Why: React.FC = () => {
+  const t = useDesign();
+  return (
+    <Bg>
+      <div style={{ padding: "70px 130px" }}>
+        <Appear>
+          <div style={{ color: t.accent2, fontFamily: t.mono, fontSize: 26, letterSpacing: 2, textTransform: "uppercase" }}>why it forgot</div>
+          <Big size={52}>What it remembers is set by the retain mission</Big>
+        </Appear>
+        <Appear delay={16}>
+          <div style={{ fontSize: 32, color: t.dim, marginTop: 14, maxWidth: 1300 }}>
+            Plain-English instructions for what to extract. Maya’s was too narrow:
           </div>
+        </Appear>
+        <Appear delay={30}>
+          <div style={{ marginTop: 28, background: t.panel, border: `1px solid ${t.bad}55`, borderLeft: `4px solid ${t.bad}`, borderRadius: 12, padding: "22px 26px", fontSize: 30, color: t.text, maxWidth: 1400 }}>
+            “{D.baselineMission}”
+          </div>
+        </Appear>
+        <Appear delay={48}>
+          <div style={{ marginTop: 28, fontSize: 32, color: t.bad }}>→ it never stored her home, her dog, her hobby, or her plans.</div>
         </Appear>
       </div>
     </Bg>
   );
 };
 
-// ============ 4. The input — Maya's notes ============
-const Docs: React.FC = () => {
+const Fix: React.FC = () => {
   const t = useDesign();
   return (
     <Bg>
       <div style={{ padding: "60px 110px" }}>
-        <SceneTitle kicker="our example" title="Meet Maya — she chats with her AI assistant" />
-        <Appear delay={12}>
-          <div style={{ fontSize: 30, color: t.dim, marginTop: 6 }}>
-            Three notes over a few months. Her agent should remember the things that matter to her.
-          </div>
+        <Appear>
+          <div style={{ color: t.accent2, fontFamily: t.mono, fontSize: 26, letterSpacing: 2, textTransform: "uppercase" }}>the fix</div>
+          <Big size={52}>Change the mission — not the data</Big>
         </Appear>
-        <div style={{ marginTop: 38, display: "flex", flexDirection: "column", gap: 20 }}>
-          {D.documents.map((d, i) => (
-            <Appear key={d.id} delay={26 + i * 16}>
-              <div style={{ background: t.panel, border: `1px solid ${t.panelBorder}`, borderRadius: 14, padding: "20px 26px", display: "flex", gap: 24, alignItems: "flex-start" }}>
-                <Chip color={t.accent2}>{d.date}</Chip>
-                <div style={{ fontSize: 29, lineHeight: 1.4, color: t.text }}>“{d.text}”</div>
-              </div>
-            </Appear>
-          ))}
-        </div>
-      </div>
-    </Bg>
-  );
-};
-
-// ============ check scene (reused for test #1 and #2) ============
-const CheckScene: React.FC<{
-  kicker: string;
-  title: string;
-  missionLabel: string;
-  mission: string;
-  facts: string[];
-  covered: Set<number>;
-  cmd: string;
-  meterDelay: number;
-  flipAt: number;
-  caption: string;
-  captionColor: string;
-  maxFacts?: number;
-}> = ({ kicker, title, missionLabel, mission, facts, covered, cmd, meterDelay, flipAt, caption, captionColor, maxFacts = 8 }) => {
-  const t = useDesign();
-  const shown = facts.slice(0, maxFacts);
-  const extra = facts.length - shown.length;
-  return (
-    <Bg>
-      <div style={{ padding: "48px 80px" }}>
-        <SceneTitle kicker={kicker} title={title} />
-        <div style={{ display: "flex", gap: 36, marginTop: 28 }}>
-          <div style={{ flex: 1.15 }}>
-            <div style={{ fontSize: 24, color: t.dim, marginBottom: 10 }}>① the mission → what the agent extracts from Maya’s notes</div>
-            <TerminalWindow title="zsh — mission-sandbox">
-              <div style={{ fontSize: 25, color: t.text }}>
-                <span style={{ color: t.good }}>$ </span>
-                <Typed text={cmd} delay={6} />
-              </div>
-              <Appear delay={42}>
-                <div style={{ marginTop: 16, fontSize: 20, color: t.faint }}>
-                  {missionLabel} <span style={{ color: t.dim }}>(plain-English instructions)</span>
-                </div>
-                <div style={{ marginTop: 6, fontSize: 22, color: t.dim, fontFamily: t.sans, lineHeight: 1.4, borderLeft: `3px solid ${t.panelBorder}`, paddingLeft: 14 }}>
-                  {mission}
-                </div>
-              </Appear>
-              <Appear delay={62}>
-                <div style={{ marginTop: 16, fontSize: 21, color: t.accent2 }}>▸ dry-run extract — real LLM, nothing stored</div>
-              </Appear>
-              <div style={{ marginTop: 14 }}>
-                {shown.map((f, i) => (
-                  <FactCard key={i} text={f} index={i} appearStart={76} />
-                ))}
-                {extra > 0 ? (
-                  <Appear delay={76 + shown.length * 6 + 6}>
-                    <div style={{ fontSize: 22, color: t.faint, fontFamily: t.mono }}>+{extra} more facts</div>
-                  </Appear>
-                ) : null}
-              </div>
-            </TerminalWindow>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 24, color: t.dim, marginBottom: 10 }}>② the golden set → what Maya’s agent <i>should</i> remember</div>
-            <Appear delay={meterDelay - 12}>
-              <div style={{ background: t.panel, border: `1px solid ${t.panelBorder}`, borderRadius: 14, padding: 24 }}>
-                <CoverageMeter covered={covered.size} total={D.golden.length} delay={meterDelay} label="coverage — golden facts captured" />
-              </div>
-            </Appear>
-            <div style={{ marginTop: 20 }}>
-              {D.golden.map((g, i) => (
-                <GoldenRow key={i} text={g} covered={covered.has(i)} index={i} flipAt={flipAt} />
-              ))}
-            </div>
-          </div>
-        </div>
-        <Appear delay={100}>
-          <div style={{ marginTop: 14, fontSize: 30, color: captionColor, textAlign: "center", fontWeight: 600 }}>{caption}</div>
-        </Appear>
-      </div>
-    </Bg>
-  );
-};
-
-// ============ 6. The fix — refine the mission ============
-const Refine: React.FC = () => {
-  const t = useDesign();
-  return (
-    <Bg>
-      <div style={{ padding: "64px 110px" }}>
-        <SceneTitle kicker="the fix" title="Don’t touch the data — fix the mission" />
-        <Appear delay={12}>
-          <div style={{ fontSize: 30, color: t.dim, marginTop: 6 }}>
-            Tell mission-sandbox what was missing. It rewrites the mission for you.
-          </div>
-        </Appear>
-        <div style={{ marginTop: 30 }}>
+        <div style={{ marginTop: 34 }}>
           <TerminalWindow title="zsh — mission-sandbox">
-            <div style={{ fontSize: 24, color: t.text, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 23, color: t.text, lineHeight: 1.5 }}>
               <span style={{ color: t.good }}>$ </span>
-              <Typed
-                text={'mission-sandbox retain mission demo \\\n    --feedback "also capture preferences, plans, pets, and the reason behind decisions"'}
-                delay={6}
-                cps={44}
-              />
+              <Typed text={`mission-sandbox retain mission maya \\\n    --feedback "${D.feedback}"`} delay={6} cps={46} />
             </div>
+            <Appear delay={92}>
+              <div style={{ marginTop: 14, fontSize: 21, color: t.good }}>✓ mission updated</div>
+            </Appear>
+            <Appear delay={104}>
+              <div style={{ marginTop: 14, fontSize: 23, color: t.text }}>
+                <span style={{ color: t.good }}>$ </span>
+                <Typed text="mission-sandbox retain apply maya" delay={108} />
+              </div>
+            </Appear>
+            <Appear delay={150}>
+              <div style={{ marginTop: 10, fontSize: 21, color: t.faint }}>re-ingesting the same 3 notes → bank maya-v2 …</div>
+            </Appear>
           </TerminalWindow>
         </div>
-        <div style={{ display: "flex", gap: 28, marginTop: 28 }}>
-          <Appear delay={74} style={{ flex: 1 }}>
-            <div style={{ background: t.panel, border: `1px solid ${t.panelBorder}`, borderRadius: 14, padding: 22 }}>
-              <div style={{ color: t.bad, fontFamily: t.mono, fontSize: 21, marginBottom: 10 }}>— mission before</div>
-              <div style={{ fontSize: 23, color: t.dim, lineHeight: 1.45 }}>{D.baseline.mission}</div>
-            </div>
-          </Appear>
-          <Appear delay={96} style={{ flex: 1.3 }}>
-            <div style={{ background: `${t.good}10`, border: `1px solid ${t.good}55`, borderRadius: 14, padding: 22 }}>
-              <div style={{ color: t.good, fontFamily: t.mono, fontSize: 21, marginBottom: 10 }}>+ mission after</div>
-              <div style={{ fontSize: 23, color: t.text, lineHeight: 1.45 }}>{D.refined.mission}</div>
-            </div>
-          </Appear>
-        </div>
+        <Appear delay={160}>
+          <div style={{ marginTop: 22, fontSize: 30, color: t.dim, textAlign: "center" }}>
+            Same notes. You just told it <span style={{ color: t.text }}>what else to remember</span>.
+          </div>
+        </Appear>
       </div>
     </Bg>
   );
 };
 
-// ============ 8. Outro ============
+const EvalV2: React.FC = () => {
+  const t = useDesign();
+  return (
+    <Split
+      chat={<ChatPanel version="v2" startDelay={60} />}
+      terminal={
+        <div>
+          <TerminalWindow title="zsh — mission-sandbox">
+            <div style={{ fontSize: 24, color: t.text }}>
+              <span style={{ color: t.good }}>$ </span>
+              <Typed text="mission-sandbox retain apply maya" delay={6} />
+            </div>
+            <Appear delay={38}>
+              <div style={{ marginTop: 12, fontSize: 21, color: t.faint }}>bank maya-v2 ready</div>
+            </Appear>
+            <Appear delay={50}>
+              <div style={{ marginTop: 14, fontSize: 22, color: t.accent2 }}>▸ running the same eval again…</div>
+            </Appear>
+          </TerminalWindow>
+          <ScoreChip score={D.scores.v2} total={D.scores.total} delay={230} label="eval score" />
+        </div>
+      }
+      caption={<Caption delay={250} color={t.good}>Same questions — now answered.</Caption>}
+    />
+  );
+};
+
 const Outro: React.FC = () => {
   const t = useDesign();
   return (
     <Bg>
       <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
         <Appear delay={2}>
-          <div style={{ fontSize: 34, color: t.dim }}>same notes · same golden set · just a better mission</div>
-        </Appear>
-        <Appear delay={16}>
-          <div style={{ display: "flex", alignItems: "center", gap: 30, fontFamily: t.mono, fontSize: 110, fontWeight: 800, marginTop: 16 }}>
-            <span style={{ color: t.bad }}>3/8</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 30, fontFamily: t.mono, fontSize: 120, fontWeight: 800 }}>
+            <span style={{ color: t.bad }}>
+              {D.scores.v1}/{D.scores.total}
+            </span>
             <span style={{ color: t.dim, fontSize: 64 }}>→</span>
-            <span style={{ color: t.good }}>8/8</span>
+            <span style={{ color: t.good }}>
+              {D.scores.v2}/{D.scores.total}
+            </span>
           </div>
         </Appear>
-        <Appear delay={34}>
-          <div style={{ fontSize: 30, color: t.dim, marginTop: 26, fontFamily: t.mono }}>real LLM extraction · no re-ingest · nothing stored</div>
+        <Appear delay={20}>
+          <div style={{ fontSize: 36, color: t.text, marginTop: 22, textAlign: "center", maxWidth: 1300 }}>
+            You didn’t touch the data or the model — you tuned <span style={{ color: t.accent }}>what gets remembered</span>, and your eval proved it.
+          </div>
         </Appear>
-        <Appear delay={50}>
-          <div style={{ fontSize: 32, color: t.faint, marginTop: 40 }}>
+        <Appear delay={40}>
+          <div style={{ fontSize: 30, color: t.faint, marginTop: 40 }}>
             <span style={{ color: t.accent }}>mission-sandbox</span> · Hindsight agent memory
           </div>
         </Appear>
@@ -357,62 +345,20 @@ const Outro: React.FC = () => {
 
 const Scenes: React.FC = () => (
   <AbsoluteFill style={{ background: hindsight.bg }}>
-    <Sequence durationInFrames={150}>
-      <Hook />
-    </Sequence>
-    <Sequence from={150} durationInFrames={210}>
-      <Catch />
-    </Sequence>
-    <Sequence from={360} durationInFrames={210}>
-      <Concept />
-    </Sequence>
-    <Sequence from={570} durationInFrames={240}>
-      <Docs />
-    </Sequence>
-    <Sequence from={810} durationInFrames={420}>
-      <CheckScene
-        kicker="test #1 · a narrow mission"
-        title="What does this mission capture?"
-        missionLabel="retain mission"
-        mission={D.baseline.mission}
-        facts={baseFacts}
-        covered={baseCovered}
-        cmd="mission-sandbox retain check demo"
-        meterDelay={130}
-        flipAt={9999}
-        caption="It kept her job — but forgot her dog, her move, her plans, her tastes. Coverage: 3/8."
-        captionColor={hindsight.amber}
-      />
-    </Sequence>
-    <Sequence from={1230} durationInFrames={300}>
-      <Refine />
-    </Sequence>
-    <Sequence from={1530} durationInFrames={450}>
-      <CheckScene
-        kicker="test #2 · refined mission"
-        title="Same notes. Same golden set. Better mission."
-        missionLabel="retain mission (refined)"
-        mission={D.refined.mission}
-        facts={refFacts}
-        covered={refCovered}
-        cmd="mission-sandbox retain check demo"
-        meterDelay={160}
-        flipAt={160}
-        caption="Now the agent remembers Maya — pets, plans, preferences and the “why”. Coverage: 8/8."
-        captionColor={hindsight.good}
-      />
-    </Sequence>
-    <Sequence from={1980} durationInFrames={240}>
-      <Outro />
-    </Sequence>
+    <Sequence durationInFrames={170}><Pain /></Sequence>
+    <Sequence from={170} durationInFrames={240}><Notes /></Sequence>
+    <Sequence from={410} durationInFrames={400}><EvalV1 /></Sequence>
+    <Sequence from={810} durationInFrames={230}><Why /></Sequence>
+    <Sequence from={1040} durationInFrames={300}><Fix /></Sequence>
+    <Sequence from={1340} durationInFrames={380}><EvalV2 /></Sequence>
+    <Sequence from={1720} durationInFrames={170}><Outro /></Sequence>
   </AbsoluteFill>
 );
 
-/** Wrap the whole video in the hindsight design so all shared components are on-brand. */
 export const MissionSandboxVideo: React.FC = () => (
   <DesignProvider design={hindsight}>
     <Scenes />
   </DesignProvider>
 );
 
-export const missionSandboxMeta = { id: "hindsight-mission-sandbox", durationInFrames: 2220, fps: 30, width: 1920, height: 1080 };
+export const missionSandboxMeta = { id: "hindsight-mission-sandbox", durationInFrames: 1890, fps: FPS, width: 1920, height: 1080 };

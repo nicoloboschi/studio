@@ -2,26 +2,29 @@ import type { Design } from "../src/lib/design";
 
 /**
  * Hindsight brand tokens — the machine-readable counterpart of ./DESIGN.md.
+ * These mirror the real Hindsight product UI (the Embed Control Center / Control Plane),
+ * extracted live from its CSS so videos read as an extension of the product:
+ *   bg #09090B · text #E7E9EE · code/panel #141417 · border zinc-800 · brand blue→teal gradient
+ *   (#0074D9 → #009296) · link #3396E8 · destructive #F0616D · Inter + JetBrains Mono.
  * Edit both together: DESIGN.md is the source of truth, this file implements it.
- * Every video under hindsight/ wraps itself in <DesignProvider design={hindsight}>.
  */
 export const hindsight: Design = {
-  // surfaces — deep navy, subtle radial wash
-  bg: "#0B1020",
-  bg2: "#111935",
-  panel: "#0E1530",
-  panelBorder: "#26314f",
-  // text
-  text: "#E8ECF8",
-  dim: "#8A95B5",
-  faint: "#5B658A",
-  // accents — indigo → cyan brand gradient; green/amber/rose for semantics
-  accent: "#6E8BFF",
-  accent2: "#22D3EE",
+  // surfaces — product near-black (zinc-950) with a faint radial lift
+  bg: "#09090B",
+  bg2: "#15151A",
+  panel: "#141417",
+  panelBorder: "#27272A",
+  // text — product foreground + zinc muted/faint
+  text: "#E7E9EE",
+  dim: "#A1A1AA",
+  faint: "#71717A",
+  // accents — product brand blue→teal; link blue for legible accent text; product rose for destructive
+  accent: "#3396E8",
+  accent2: "#00A6A6",
   good: "#34D399",
   amber: "#FBBF24",
-  bad: "#FB7185",
-  // type — system sans for prose, mono for code/terminal/numbers
-  mono: "'SF Mono','JetBrains Mono','Fira Code',ui-monospace,Menlo,monospace",
-  sans: "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif",
+  bad: "#F0616D",
+  // type — the product's fonts (loaded in src/lib/fonts.ts)
+  mono: "'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace",
+  sans: "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
 };

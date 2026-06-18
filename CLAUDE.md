@@ -81,3 +81,7 @@ the rendered video.
 - **hindsight/** — Hindsight (agent memory). Design: dark engineering-console, indigo→cyan gradient.
   - **mission-sandbox/** — demo of tuning a "retain mission" and watching golden coverage go 3/8 → 8/8
     on real Gemini extraction. See its `script.md`.
+  - **release-notes/** — **recurring** per-release video. Data-driven: `capture/build-data.mjs` digests
+    one release blog post → `data.json`, and `Video.tsx` maps over it (intro → feature scenes → grouped
+    lists → "one more thing" → upgrade CTA). To cut the next release, edit `build-data.mjs` and re-render —
+    see its `script.md`. Currently loaded with **0.8.3**; prior cuts archived under `capture/releases/`.
