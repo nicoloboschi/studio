@@ -61,6 +61,9 @@ that brand's `DESIGN.md`.
 npm install                                              # first time
 npm run studio                                           # live browser preview (best for iterating)
 npm run compositions                                     # list registered videos
+npm run gallery                                           # render all videos + open a play-only browser gallery; each card shows its absolute .mp4 path (click to copy)
+#   flags: -- --force (re-render all) · --no-open (don't launch browser)
+npm run render:1v1 -- qwen3.5-2b gemma-3-4b              # llm-bench 1v1 template → X-ready out/1v1_<A>_vs_<B>_square.mp4 (add --vertical for 9:16)
 npm run render -- hindsight-mission-sandbox out/hindsight-mission-sandbox.mp4
 ```
 
@@ -85,3 +88,28 @@ the rendered video.
     one release blog post → `data.json`, and `Video.tsx` maps over it (intro → feature scenes → grouped
     lists → "one more thing" → upgrade CTA). To cut the next release, edit `build-data.mjs` and re-render —
     see its `script.md`. Currently loaded with **0.8.3**; prior cuts archived under `capture/releases/`.
+
+- **agent-memory/** — **vertical social shorts (9:16, 1080×1920)** about *agent memory as a concept*,
+  not any one product. Distinct brand from hindsight/: bolder, high-contrast, violet→magenta gradient.
+  - **time-to-solve/** — a **6s seamless loop**: two balls bounce left↔right — *agentic search* on files
+    (rose, slow, re-reads files every query) vs a *memory system* (violet, **10× faster**, one recall).
+    The speed axis only. Multiple is **real cited data** in `data.json` (`capture/build-data.mjs`): memory
+    recall ≈0.2s on LoCoMo (Mem0) vs multi-step agentic retrieval ~seconds → conservative 10×. `script.md`.
+  - **context-window/** — **"a bigger window isn't memory"** short (~23s). A context window fills with dev
+    notes; the key fact (*Postgres, not MySQL*) scrolls out → agent answers wrong; a memory pill keeps the
+    fact → same question answered right. Concrete, data-driven (`data.json`). `script.md`.
+  - **etch-a-sketch/ · leaky-bucket/ · sandcastle/ · snowball/** — **wordless 5s hook loops** (no text):
+    forgetting (etch wipes), RAM-not-storage (leaky vs sealed bucket), durability (wave vs stone castle),
+    compounding (melting vs growing snowball). Tweet copy lives outside the video.
+
+- **llm-bench/** — **fun benchmark animations for local-LLM evals.** Arcade leaderboard / drag-race look:
+  dark track, neon lime→cyan, big mono scoreboard numbers. See `DESIGN.md`.
+  - **local-speed/** — ~25s: 5 models **race** on peak tok/s (numbers count up, checkered finish) →
+    **leaderboard** with single/peak/prefill/schema → close on the fastest. Data-driven from
+    `capture/build-data.mjs` → `data.json`; add a model and it slots into both scenes. `script.md`.
+  - **head-to-head/** — **reusable 1v1 template.** Fast round-by-round match (single · parallelism ·
+    prefill · structured-output · size), each round its own metric viz; persistent scorebar with model
+    **icons** (`public/icons/<family>.png`, dot fallback). Two responsive comps: `…-head-to-head` (9:16)
+    and `…-head-to-head-x` (1:1 for X). Retarget any pair + export X-ready, model-named MP4 with
+    **`npm run render:1v1 -- <modelA> <modelB>`** — reads the **`vendor/localmaxxing` submodule**
+    (`results/models/*.json`). See `script.md`.

@@ -1,0 +1,63 @@
+{
+  "headline": "1v1 — Qwen3.5-2B vs gemma-3-4b across every axis (Apple M3 Max).",
+  "machine": "Apple M3 Max · 36 GB",
+  "source": "vendor/localmaxxing/results/models (2026-06-24 13:01:15)",
+  "a": {
+    "name": "Qwen3.5-2B",
+    "icon": "qwen",
+    "params_b": 2,
+    "size_gb": 1.7,
+    "downloads": 11055,
+    "single": 88.6,
+    "prefill": 2272.9,
+    "levels": [
+      {
+        "c": 1,
+        "agg": 88.6
+      },
+      {
+        "c": 2,
+        "agg": 161.2
+      },
+      {
+        "c": 4,
+        "agg": 210.7
+      },
+      {
+        "c": 8,
+        "agg": 250.4
+      }
+    ],
+    "schema_ok": 4,
+    "schema_total": 5
+  },
+  "b": {
+    "name": "gemma-3-4b",
+    "icon": "gemma",
+    "params_b": 4.3,
+    "size_gb": 3,
+    "downloads": 101556,
+    "single": 63,
+    "prefill": 1063.9,
+    "levels": [
+      {
+        "c": 1,
+        "agg": 63
+      },
+      {
+        "c": 2,
+        "agg": 109.2
+      },
+      {
+        "c": 4,
+        "agg": 149.5
+      },
+      {
+        "c": 8,
+        "agg": 197.2
+      }
+    ],
+    "schema_ok": 5,
+    "schema_total": 5
+  }
+}

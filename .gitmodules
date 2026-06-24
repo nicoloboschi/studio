@@ -1,0 +1,3 @@
+[submodule "vendor/localmaxxing"]
+	path = vendor/localmaxxing
+	url = https://github.com/nicoloboschi/localmaxxing.git

@@ -1,0 +1,20 @@
+{
+  "headline": "Memory recalls once; agentic search re-reads the files every query",
+  "axis": "speed / round-trips per query",
+  "speedup": 10,
+  "memoryRecallSec": 0.2,
+  "agenticSearchSec": 2,
+  "credit": "memory recall ~0.2s · Mem0, LoCoMo",
+  "sources": [
+    {
+      "label": "Mem0",
+      "metric": "~0.2s p95 search latency · ~1.8K tokens/conv vs 26K full-context (LoCoMo)",
+      "url": "https://arxiv.org/abs/2504.19413"
+    },
+    {
+      "label": "Agentic retrieval",
+      "metric": "multi-step agentic search latency ~0.8s → ~5s (more round-trips)",
+      "url": "https://redis.io/blog/ai-agent-benchmarks/"
+    }
+  ]
+}

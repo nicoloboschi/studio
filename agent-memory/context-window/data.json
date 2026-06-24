@@ -1,0 +1,38 @@
+{
+  "headline": "A bigger context window isn't memory: the key fact scrolls out, the agent answers wrong — memory keeps it.",
+  "messages": [
+    {
+      "text": "heads up: we're on Postgres, not MySQL",
+      "key": true
+    },
+    {
+      "text": "the API is written in Go"
+    },
+    {
+      "text": "deploys go out on Fridays"
+    },
+    {
+      "text": "web app uses pnpm"
+    },
+    {
+      "text": "staging mirrors prod"
+    },
+    {
+      "text": "feature flags via LaunchDarkly"
+    },
+    {
+      "text": "CI runs the tests on every PR"
+    },
+    {
+      "text": "logs ship to Datadog"
+    }
+  ],
+  "capacity": 5,
+  "memory": {
+    "label": "DB",
+    "value": "Postgres"
+  },
+  "question": "what migration tool should I use?",
+  "answerWrong": "Use Flyway with your MySQL setup.",
+  "answerRight": "Use a Postgres tool — golang-migrate or Atlas."
+}
