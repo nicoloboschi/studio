@@ -63,7 +63,8 @@ npm run studio                                           # live browser preview 
 npm run compositions                                     # list registered videos
 npm run gallery                                           # render all videos + open a play-only browser gallery; each card shows its absolute .mp4 path (click to copy)
 #   flags: -- --force (re-render all) · --no-open (don't launch browser)
-npm run render:1v1 -- qwen3.5-2b gemma-3-4b              # llm-bench 1v1 template → X-ready out/1v1_<A>_vs_<B>_square.mp4 (add --vertical for 9:16)
+npm run render:1v1 -- qwen3.5-2b gemma-3-4b              # llm-bench 1v1 → square in ~/Documents/x1v1 (add --vertical → 9:16 in ~/dev/uploady/videos). Never writes to out/.
+npm run render:1v1:all                                   # every model pair (incl. same family/diff size); -- --square = square · -- --both = both formats
 npm run render -- hindsight-mission-sandbox out/hindsight-mission-sandbox.mp4
 ```
 
@@ -110,6 +111,12 @@ the rendered video.
   - **head-to-head/** — **reusable 1v1 template.** Fast round-by-round match (single · parallelism ·
     prefill · structured-output · size), each round its own metric viz; persistent scorebar with model
     **icons** (`public/icons/<family>.png`, dot fallback). Two responsive comps: `…-head-to-head` (9:16)
-    and `…-head-to-head-x` (1:1 for X). Retarget any pair + export X-ready, model-named MP4 with
-    **`npm run render:1v1 -- <modelA> <modelB>`** — reads the **`vendor/localmaxxing` submodule**
-    (`results/models/*.json`). See `script.md`.
+    and `…-head-to-head-x` (1:1 for X). Reads the **`vendor/localmaxxing` submodule** (`results/models/*.json`).
+
+    **To make 1v1 videos, ALWAYS use the scripts** — don't render the comps by hand:
+    `npm run render:1v1 -- <A> <B>` (one pair) or `npm run render:1v1:all` (every pair). They pick models
+    from the submodule, name files `"<A> vs <B> | <chip> <backend>.mp4"`, add the runtime badge + GitHub
+    footer + icons + royalty-free soundtrack, X-optimize (yuv420p/faststart/AAC), and **route by aspect:
+    square → `~/Documents/x1v1`, vertical → `~/dev/uploady/videos` (never `out/`)**. Destinations live in
+    `DEST` in `scripts/render-1v1.mjs`; default soundtrack + flags (`--runtime`, `--music`, `--results`) in
+    its header. See `script.md`.

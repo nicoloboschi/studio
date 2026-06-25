@@ -30,7 +30,11 @@ npm run render:1v1 -- qwen phi --results=~/dev/localmaxxing/results/run_20260624
 npm run render:1v1                                   # first two completed models in latest.json
 npm run render:1v1:all                               # EVERY unique pair (incl. same family/diff size), vertical
 npm run render:1v1:all -- --square                   # …as square (1:1) instead
+npm run render:1v1:all -- --both                     # …both formats in one pass
 ```
+
+**Exports route by aspect** (set in `DEST` in `scripts/render-1v1.mjs`): **square → `~/Documents/x1v1`**,
+**vertical → `~/dev/uploady/videos`**. Nothing is written to `out/`.
 
 `render:1v1` = `build-data.mjs` (writes `data.json` for the pair) → render → **X-optimize**
 (1080×1080, H.264 **yuv420p**, **+faststart**, **AAC soundtrack**) → write `out/1v1_<A>_vs_<B>_square.mp4`

@@ -2,8 +2,9 @@
 // size), via render-1v1.mjs. Defaults to vertical-only into out/ + ~/dev/uploady/videos.
 //
 // Usage:
-//   npm run render:1v1:all                 # all pairs, vertical (9:16)
-//   npm run render:1v1:all -- --square     # all pairs, square (1:1) too
+//   npm run render:1v1:all                 # all pairs, vertical (9:16) → ~/dev/uploady/videos
+//   npm run render:1v1:all -- --square     # all pairs, square (1:1)  → ~/Documents/x1v1
+//   npm run render:1v1:all -- --both       # all pairs, BOTH formats in one pass
 //   (any extra flags, e.g. --music=…, are passed through to render-1v1)
 
 import { execFileSync } from "node:child_process";
@@ -26,10 +27,12 @@ const pairs = [];
 for (let i = 0; i < models.length; i++) for (let j = i + 1; j < models.length; j++) pairs.push([models[i], models[j]]);
 
 const argv = process.argv.slice(2);
-const aspect = argv.includes("--square") ? [] : ["--vertical", "--no-x"];
-const passthru = argv.filter((a) => a !== "--square");
+// --both = square (default) + vertical · --square = square only · default = vertical only
+const aspect = argv.includes("--both") ? ["--vertical"] : argv.includes("--square") ? [] : ["--vertical", "--no-x"];
+const passthru = argv.filter((a) => a !== "--square" && a !== "--both");
+const label = argv.includes("--both") ? "square + vertical" : argv.includes("--square") ? "square" : "vertical";
 
-console.log(`${models.length} models → ${pairs.length} matchups (${aspect.length ? "vertical" : "square"})`);
+console.log(`${models.length} models → ${pairs.length} matchups (${label})`);
 let ok = 0, fail = 0;
 pairs.forEach(([a, b], i) => {
   process.stdout.write(`[${i + 1}/${pairs.length}] ${a} vs ${b} … `);
