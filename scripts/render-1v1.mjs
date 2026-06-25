@@ -55,5 +55,8 @@ const exportClip = (compId, suffix, aspectTag) => {
   console.log(`  ↳ ${copyTo}`);
 };
 
-if (!argv.includes("--no-x")) exportClip("llm-bench-head-to-head-x", "_square");
-if (argv.includes("--vertical")) exportClip("llm-bench-head-to-head", "_vertical", "(9-16)");
+const doSquare = !argv.includes("--no-x");
+const doVertical = argv.includes("--vertical");
+if (doSquare) exportClip("llm-bench-head-to-head-x", "_square");
+// vertical gets a "(9-16)" tag only when both are exported; on its own it keeps the clean name
+if (doVertical) exportClip("llm-bench-head-to-head", "_vertical", doSquare ? "(9-16)" : undefined);

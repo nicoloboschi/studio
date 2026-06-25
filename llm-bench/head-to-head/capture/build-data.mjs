@@ -95,7 +95,7 @@ const data = {
   runtime,
   repo: "nicoloboschi/localmaxxing",
   // royalty-free soundtrack (public/music/*); override with --music=<file>, or "" for silent
-  music: flags.music !== undefined ? String(flags.music) : "techno-fest.mixkit.mp3",
+  music: flags.music !== undefined ? String(flags.music) : "give.mixkit.mp3",
   source: `${src.replace(STUDIO + "/", "")}${pool.when ? ` (${pool.when})` : ""}`,
   a, b,
 };

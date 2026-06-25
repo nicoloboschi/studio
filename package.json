@@ -8,7 +8,8 @@
     "render": "remotion render src/index.ts",
     "compositions": "remotion compositions src/index.ts",
     "gallery": "node scripts/gallery.mjs",
-    "render:1v1": "node scripts/render-1v1.mjs"
+    "render:1v1": "node scripts/render-1v1.mjs",
+    "render:1v1:all": "node scripts/render-all-1v1.mjs"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.479",

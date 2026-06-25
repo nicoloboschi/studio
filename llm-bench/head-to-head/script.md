@@ -28,6 +28,8 @@ npm run render:1v1 -- qwen3.5-9b mistral            # any two; matches repo/fami
 npm run render:1v1 -- qwen gemma --vertical          # also export the 9:16 vertical
 npm run render:1v1 -- qwen phi --results=~/dev/localmaxxing/results/run_20260624_105440.json
 npm run render:1v1                                   # first two completed models in latest.json
+npm run render:1v1:all                               # EVERY unique pair (incl. same family/diff size), vertical
+npm run render:1v1:all -- --square                   # …as square (1:1) instead
 ```
 
 `render:1v1` = `build-data.mjs` (writes `data.json` for the pair) → render → **X-optimize**
