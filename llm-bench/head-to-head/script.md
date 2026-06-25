@@ -31,8 +31,16 @@ npm run render:1v1                                   # first two completed model
 ```
 
 `render:1v1` = `build-data.mjs` (writes `data.json` for the pair) → render → **X-optimize**
-(1080×1080, H.264 **yuv420p**, **+faststart**, silent **AAC** track so X accepts it) → write
-`out/1v1_<A>_vs_<B>_square.mp4`. Just the data step: `node capture/build-data.mjs <matchA> <matchB>`.
+(1080×1080, H.264 **yuv420p**, **+faststart**, **AAC soundtrack**) → write `out/1v1_<A>_vs_<B>_square.mp4`
+**and copy** a display-named file to **`~/dev/uploady/videos/`**, e.g.
+`Qwen3.5-2b vs Gemma3-4b | Apple M3 Max MLX.mp4`. Just the data step: `node capture/build-data.mjs <matchA> <matchB>`.
+
+**Flags:** `--vertical` (also export 9:16) · `--runtime="MLX · M3 Pro · 36 GB"` (override the top spec badge) ·
+`--music=<file>` from `public/music/` or `--music=` for silent (default `techno-fest.mixkit.mp3`).
+
+**On-screen extras (data-driven):** top spec badge `runtime` (MLX · chip · RAM, from the machine record),
+a GitHub footer (`repo` field), model icons (`public/icons/<family>.png`), and the royalty-free `music`
+track. Famous/commercial tracks would get muted/struck on X — keep it royalty-free.
 
 ## Data (`data.json`, from `capture/build-data.mjs`)
 

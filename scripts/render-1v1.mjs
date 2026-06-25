@@ -11,9 +11,12 @@
 //   square = 1080×1080, H.264 yuv420p, +faststart, silent AAC track — ready to upload to X/Twitter.
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, unlinkSync } from "node:fs";
+import { readFileSync, unlinkSync, mkdirSync, copyFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { homedir } from "node:os";
+
+const COPY_DIR = join(homedir(), "dev/uploady/videos"); // each export is also copied here, display-named
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const argv = process.argv.slice(2);
@@ -27,17 +30,30 @@ run("node", [join(ROOT, "llm-bench/head-to-head/capture/build-data.mjs"), ...dat
 // 2. derive the model-named output base
 const data = JSON.parse(readFileSync(join(ROOT, "llm-bench/head-to-head/data.json"), "utf8"));
 const slug = (s) => s.replace(/[^a-zA-Z0-9.]+/g, "-");
-const base = `1v1_${slug(data.a.name)}_vs_${slug(data.b.name)}`;
+const base = `1v1_${slug(data.a.name)}_vs_${slug(data.b.name)}`; // safe working name in out/
 
-// 3. render → X-optimize (yuv420p + silent audio track) → faststart, into the model-named file
-const exportClip = (compId, suffix) => {
+// display name for the uploady copy, e.g. "Qwen3.5-2b vs Gemma3-4b | Apple M3 Max MLX"
+const pretty = (n) =>
+  n.replace(/([A-Za-z])-(\d)/, "$1$2")              // glue family to its first version (gemma-3 → gemma3)
+    .replace(/^./, (c) => c.toUpperCase())          // capitalize family
+    .replace(/([0-9.]+)B\b/g, "$1b");               // 2B → 2b
+const chip = (data.machine || "").split(" · ")[0] || "local";
+const backend = (data.runtime || "").split(" · ")[0] || "";
+const niceBase = `${pretty(data.a.name)} vs ${pretty(data.b.name)} | ${chip} ${backend}`.trim();
+
+// 3. render → X-optimize (yuv420p + faststart + audio) → out/, then copy display-named to COPY_DIR
+const exportClip = (compId, suffix, aspectTag) => {
   const tmp = join(ROOT, "out", `_tmp_${suffix}.mp4`);
   const final = join(ROOT, "out", `${base}${suffix}.mp4`);
   run("npx", ["remotion", "render", "src/index.ts", compId, tmp, "--codec=h264", "--pixel-format=yuv420p", "--enforce-audio-track"]);
   run("npx", ["remotion", "ffmpeg", "-y", "-i", tmp, "-c", "copy", "-movflags", "+faststart", final]);
   try { unlinkSync(tmp); } catch {}
   console.log(`✓ ${final}`);
+  mkdirSync(COPY_DIR, { recursive: true });
+  const copyTo = join(COPY_DIR, `${niceBase}${aspectTag ? ` ${aspectTag}` : ""}.mp4`);
+  copyFileSync(final, copyTo);
+  console.log(`  ↳ ${copyTo}`);
 };
 
 if (!argv.includes("--no-x")) exportClip("llm-bench-head-to-head-x", "_square");
-if (argv.includes("--vertical")) exportClip("llm-bench-head-to-head", "_vertical");
+if (argv.includes("--vertical")) exportClip("llm-bench-head-to-head", "_vertical", "(9-16)");

@@ -76,14 +76,26 @@ const toSide = (m) => ({
   schema_total: m.schema.num_tasks,
 });
 
-const a = toSide(pick(names[0], 0));
-const b = toSide(pick(names[1], 1));
+const ma = pick(names[0], 0), mb = pick(names[1], 1);
+const a = toSide(ma);
+const b = toSide(mb);
 if (a.name === b.name) throw new Error(`both sides resolved to "${a.name}" — give two distinct matches`);
 
 const machine = [pool.machine?.chip, pool.machine?.ram_gb ? `${pool.machine.ram_gb} GB` : null].filter(Boolean).join(" · ") || "local";
+// runtime badge shown at the top of the video. Derived from the data (MLX models + the recorded chip),
+// overridable with --runtime="..." (e.g. if the benchmark mis-detects the chip).
+const shortChip = (pool.machine?.chip || "").replace(/^Apple\s+/i, "") || "local";
+const backendLabel = /mlx/i.test(ma.repo) ? "MLX" : (ma.backend || "").toUpperCase();
+const ram = pool.machine?.ram_gb ? `${pool.machine.ram_gb} GB` : null;
+const runtime = flags.runtime ? String(flags.runtime) : [backendLabel, shortChip, ram].filter(Boolean).join(" · ");
+
 const data = {
   headline: `1v1 — ${a.name} vs ${b.name} across every axis (${pool.machine?.chip ?? "local"}).`,
   machine,
+  runtime,
+  repo: "nicoloboschi/localmaxxing",
+  // royalty-free soundtrack (public/music/*); override with --music=<file>, or "" for silent
+  music: flags.music !== undefined ? String(flags.music) : "techno-fest.mixkit.mp3",
   source: `${src.replace(STUDIO + "/", "")}${pool.when ? ` (${pool.when})` : ""}`,
   a, b,
 };
