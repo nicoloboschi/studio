@@ -47,15 +47,15 @@ const gmax = Math.max(peakA, peakB);
 // layout adapts to canvas height: tall 9:16 vs square 1:1 (sq = compact). Same components serve both.
 const useSq = () => useVideoConfig().height < 1300;
 
-const R_DUR = { single: 60, parallel: 78, prefill: 58, schema: 62, size: 72 };
+const R_DUR = { single: 120, parallel: 78, prefill: 58, schema: 62, size: 72 };
 const ROUNDS = [
-  { from: 0, dur: R_DUR.single, win: "a" as const },
-  { from: 60, dur: R_DUR.parallel, win: "a" as const },
-  { from: 138, dur: R_DUR.prefill, win: "a" as const },
-  { from: 196, dur: R_DUR.schema, win: "b" as const },
-  { from: 258, dur: R_DUR.size, win: "a" as const },
+  { from: 0, dur: R_DUR.single, win: "a" as const },   // single = live streaming round
+  { from: 120, dur: R_DUR.parallel, win: "a" as const },
+  { from: 198, dur: R_DUR.prefill, win: "a" as const },
+  { from: 256, dur: R_DUR.schema, win: "b" as const },
+  { from: 318, dur: R_DUR.size, win: "a" as const },
 ];
-const TOTAL = 258 + R_DUR.size;
+const TOTAL = 318 + R_DUR.size;
 const resolveFrame = (r: { from: number; dur: number }) => r.from + Math.floor(r.dur * 0.62);
 
 const Watermark: React.FC<{ n: number }> = ({ n }) => {
@@ -86,7 +86,7 @@ const WinStamp: React.FC<{ color: string; x: number; y: number; at: number }> = 
   const s = spring({ frame: f - at, fps: FPS, config: { damping: 11, mass: 0.4 } });
   if (f < at) return null;
   return (
-    <div style={{ position: "absolute", left: x, top: y, transform: `scale(${s}) rotate(-8deg)`, border: `4px solid ${color}`, borderRadius: 12, padding: "4px 18px", fontFamily: t.mono, fontSize: 36, fontWeight: 800, letterSpacing: 4, color }}>WIN</div>
+    <div style={{ position: "absolute", left: x, top: y, transform: `scale(${s}) rotate(-8deg)`, background: t.bg, border: `4px solid ${color}`, borderRadius: 12, padding: "4px 18px", fontFamily: t.mono, fontSize: 36, fontWeight: 800, letterSpacing: 4, color }}>WIN</div>
   );
 };
 
@@ -120,6 +120,63 @@ const SpeedRound: React.FC<{ n: number; mkey: "single" | "prefill"; title: strin
       <div style={{ position: "absolute", left: FINISHX, top: ay - 70, width: 3, height: by + barH - (ay - 70) + 6, background: t.faint, opacity: 0.4 }} />
       {lane(av, A, A_NAME, "a")}
       {lane(bv, B, B_NAME, "b")}
+    </Bg>
+  );
+};
+
+// ===== single stream round — stream the same answer at each model's real tok/s =====
+const STREAM_TEXT = `Sure! Here's a small helper that reverses a string:
+
+def reverse(s):
+    return s[::-1]
+
+It walks the characters backwards with slice notation (step -1) and builds a new string. It runs in O(n) time, allocates a single copy, and works on any sliceable sequence — call reverse("hello") to get "olleh".`;
+
+const StreamRound: React.FC<{ n: number }> = ({ n }) => {
+  const t = useDesign();
+  const f = useCurrentFrame();
+  const sq = useSq();
+  const REVEAL = 96;
+  const maxS = Math.max(D.a.single, D.b.single);
+  const panelH = sq ? 300 : 612, top0 = sq ? 300 : 472, gap = sq ? 18 : 34, bodyFs = sq ? 20 : 27;
+  const win = D.a.single >= D.b.single ? "a" : "b";
+  const panel = (s: Side, color: string, idx: number) => {
+    const frac = clamp01((s.single / maxS) * ((f - 6) / REVEAL));
+    const chars = Math.floor(STREAM_TEXT.length * frac);
+    const tokens = Math.round(chars / 4);
+    const done = frac >= 1;
+    const cursorOn = f % 18 < 9;
+    const py = top0 + idx * (panelH + gap);
+    return (
+      <div style={{ position: "absolute", left: 60, right: 60, top: py, height: panelH, background: t.panel, border: `1px solid ${done ? color : t.panelBorder}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: sq ? "12px 18px" : "16px 22px", borderBottom: `1px solid ${t.panelBorder}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <ModelIcon icon={s.icon} color={color} size={sq ? 30 : 36} />
+            <span style={{ fontFamily: t.sans, fontSize: sq ? 28 : 34, fontWeight: 600, color: t.text }}>{s.name}</span>
+            <span style={{ fontFamily: t.mono, fontSize: sq ? 22 : 26, color, marginLeft: 6 }}>{s.single.toFixed(1)} tok/s</span>
+          </div>
+          <span style={{ fontFamily: t.mono, fontSize: sq ? 26 : 30, fontWeight: 700, color: done ? t.good : t.dim }}>{tokens}<span style={{ color: t.faint, fontSize: sq ? 18 : 22 }}> tok</span></span>
+        </div>
+        <div style={{ flex: 1, padding: sq ? "14px 18px" : "18px 22px", fontFamily: t.mono, fontSize: bodyFs, lineHeight: 1.45, color: t.text, whiteSpace: "pre-wrap", wordBreak: "break-word", overflow: "hidden" }}>
+          {STREAM_TEXT.slice(0, chars)}
+          <span style={{ opacity: done ? 0 : cursorOn ? 1 : 0, color }}>▌</span>
+        </div>
+        <div style={{ padding: sq ? "0 18px 16px" : "0 22px 18px" }}>
+          <div style={{ height: sq ? 12 : 14, borderRadius: 7, background: t.bg2, border: `1px solid ${t.panelBorder}`, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${frac * 100}%`, background: color, boxShadow: `0 0 16px ${color}99` }} />
+          </div>
+        </div>
+      </div>
+    );
+  };
+  const wy = top0 + (win === "a" ? 0 : 1) * (panelH + gap);
+  return (
+    <Bg>
+      <Watermark n={n} />
+      <Title text="SINGLE STREAM" unit="tok/s · same answer, streamed live" />
+      {panel(D.a, A, 0)}
+      {panel(D.b, B, 1)}
+      <WinStamp color={win === "a" ? A : B} x={sq ? 590 : 760} y={wy + panelH - (sq ? 66 : 80)} at={REVEAL + 8} />
     </Bg>
   );
 };
@@ -281,7 +338,7 @@ const Match: React.FC = () => (
         volume={(f) => interpolate(f, [0, 8, TOTAL - 22, TOTAL], [0, 0.85, 0.85, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}
       />
     ) : null}
-    <Sequence durationInFrames={ROUNDS[0].dur}><SpeedRound n={1} mkey="single" title="SINGLE STREAM" /></Sequence>
+    <Sequence durationInFrames={ROUNDS[0].dur}><StreamRound n={1} /></Sequence>
     <Sequence from={ROUNDS[1].from} durationInFrames={ROUNDS[1].dur}><ParallelRound n={2} /></Sequence>
     <Sequence from={ROUNDS[2].from} durationInFrames={ROUNDS[2].dur}><SpeedRound n={3} mkey="prefill" title="PREFILL" /></Sequence>
     <Sequence from={ROUNDS[3].from} durationInFrames={ROUNDS[3].dur}><SchemaRound n={4} /></Sequence>
