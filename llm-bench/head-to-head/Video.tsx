@@ -49,14 +49,17 @@ const useSq = () => useVideoConfig().height < 1300;
 
 // round winners computed from the data — correct for ANY pair, not just the canonical one
 const lastAgg = (s: Side) => s.levels[s.levels.length - 1].agg;
-const WIN: Record<string, "a" | "b"> = {
-  single: D.a.single >= D.b.single ? "a" : "b",
-  parallel: lastAgg(D.a) >= lastAgg(D.b) ? "a" : "b",
-  prefill: D.a.prefill >= D.b.prefill ? "a" : "b",
-  schema: D.a.schema_ok >= D.b.schema_ok ? "a" : "b",
-  ifeval: (D.a.ifeval ?? 0) >= (D.b.ifeval ?? 0) ? "a" : "b",
-  gsm8k: (D.a.gsm8k ?? 0) >= (D.b.gsm8k ?? 0) ? "a" : "b",
-  size: D.a.size_gb <= D.b.size_gb ? "a" : "b",
+// "a" | "b" | "tie" — a true tie favors NEITHER side
+const winner = (av: number, bv: number, lowerBetter = false): "a" | "b" | "tie" =>
+  av === bv ? "tie" : (lowerBetter ? av < bv : av > bv) ? "a" : "b";
+const WIN: Record<string, "a" | "b" | "tie"> = {
+  single: winner(D.a.single, D.b.single),
+  parallel: winner(lastAgg(D.a), lastAgg(D.b)),
+  prefill: winner(D.a.prefill, D.b.prefill),
+  schema: winner(D.a.schema_ok, D.b.schema_ok),
+  ifeval: winner(D.a.ifeval ?? 0, D.b.ifeval ?? 0),
+  gsm8k: winner(D.a.gsm8k ?? 0, D.b.gsm8k ?? 0),
+  size: winner(D.a.size_gb, D.b.size_gb, true),
 };
 // each round = quick reveal, then a generous HOLD on the settled result before cutting
 const ROUND_DUR: Record<string, number> = { single: 150, parallel: 96, prefill: 92, schema: 96, ifeval: 96, gsm8k: 96, size: 100 };
@@ -113,7 +116,7 @@ const SpeedRound: React.FC<{ n: number; mkey: "single" | "prefill"; title: strin
   const ay = sq ? 472 : 740, by = sq ? 716 : 1120, barH = sq ? 104 : 132, numFs = sq ? 84 : 100, nameFs = sq ? 40 : 46;
   const lane = (val: number, color: string, name: string, side: "a" | "b") => {
     const len = (FINISHX - 80) * (val / best) * gp;
-    const won = val >= best;
+    const won = WIN[mkey] === side;
     const y = side === "a" ? ay : by;
     return (
       <>
@@ -150,7 +153,7 @@ const StreamRound: React.FC<{ n: number }> = ({ n }) => {
   const REVEAL = 96;
   const maxS = Math.max(D.a.single, D.b.single);
   const panelH = sq ? 300 : 612, top0 = sq ? 300 : 472, gap = sq ? 18 : 34, bodyFs = sq ? 20 : 27;
-  const win = D.a.single >= D.b.single ? "a" : "b";
+  const win = WIN.single;
   const panel = (s: Side, color: string, idx: number) => {
     const frac = clamp01((s.single / maxS) * ((f - 6) / REVEAL));
     const chars = Math.floor(STREAM_TEXT.length * frac);
@@ -180,14 +183,14 @@ const StreamRound: React.FC<{ n: number }> = ({ n }) => {
       </div>
     );
   };
-  const wy = top0 + (win === "a" ? 0 : 1) * (panelH + gap);
+  const wy = top0 + (win === "b" ? 1 : 0) * (panelH + gap);
   return (
     <Bg>
       <Watermark n={n} />
       <Title text="SINGLE STREAM" unit="tok/s · same answer, streamed live" />
       {panel(D.a, A, 0)}
       {panel(D.b, B, 1)}
-      <WinStamp color={win === "a" ? A : B} x={sq ? 590 : 760} y={wy + panelH - (sq ? 66 : 80)} at={REVEAL + 8} />
+      {win !== "tie" && <WinStamp color={win === "a" ? A : B} x={sq ? 590 : 760} y={wy + panelH - (sq ? 66 : 80)} at={REVEAL + 8} />}
     </Bg>
   );
 };
@@ -198,7 +201,6 @@ const ParallelRound: React.FC<{ n: number }> = ({ n }) => {
   const f = useCurrentFrame();
   const sq = useSq();
   const LX = 210, TRACK = 900 - LX;
-  const won = peakA >= peakB;
   const start = sq ? 372 : 640, step = sq ? 130 : 152;
   return (
     <Bg>
@@ -226,7 +228,7 @@ const ParallelRound: React.FC<{ n: number }> = ({ n }) => {
           </div>
         );
       })}
-      {won && <WinStamp color={A} x={744} y={sq ? 300 : 556} at={48} />}
+      {WIN.parallel !== "tie" && <WinStamp color={WIN.parallel === "a" ? A : B} x={744} y={sq ? 300 : 556} at={48} />}
     </Bg>
   );
 };
@@ -262,8 +264,8 @@ const SchemaRound: React.FC<{ n: number }> = ({ n }) => {
       <div style={{ position: "absolute", top: sq ? 304 : 560, left: 80, right: 80, fontFamily: t.mono, fontSize: sq ? 22 : 24, color: t.dim }}>
         5 extraction tasks · how many parsed as schema-valid JSON?
       </div>
-      {row(D.a, A, A_NAME, sq ? 440 : 680, false)}
-      {row(D.b, B, B_NAME, sq ? 700 : 1020, true)}
+      {row(D.a, A, A_NAME, sq ? 440 : 680, WIN.schema === "a")}
+      {row(D.b, B, B_NAME, sq ? 700 : 1020, WIN.schema === "b")}
     </Bg>
   );
 };
@@ -287,7 +289,7 @@ const SizeRound: React.FC<{ n: number }> = ({ n }) => {
         <div style={{ position: "absolute", left: cx - 200, top: cy + (sq ? 150 : 250), width: 400 }}>
           <NameTag s={s} color={s === D.a ? A : B} fontSize={sq ? 34 : 40} nameColor={win ? t.text : t.dim} center />
         </div>
-        {win && <WinStamp color={A} x={cx - 70} y={cy + (sq ? 206 : 316)} at={32} />}
+        {win && <WinStamp color={s === D.a ? A : B} x={cx - 70} y={cy + (sq ? 206 : 316)} at={32} />}
       </>
     );
   };
@@ -295,8 +297,8 @@ const SizeRound: React.FC<{ n: number }> = ({ n }) => {
     <Bg>
       <Watermark n={n} />
       <Title text="SIZE" unit="on disk · smaller wins" />
-      {block(D.a, A_NAME, true, 360)}
-      {block(D.b, B_NAME, false, 760)}
+      {block(D.a, A_NAME, WIN.size === "a", 360)}
+      {block(D.b, B_NAME, WIN.size === "b", 760)}
     </Bg>
   );
 };
@@ -312,7 +314,7 @@ const AccuracyRound: React.FC<{ n: number; mkey: "ifeval" | "gsm8k"; title: stri
   const ay = sq ? 472 : 740, by = sq ? 716 : 1120, barH = sq ? 104 : 132, numFs = sq ? 80 : 96;
   const lane = (val: number, color: string, side: "a" | "b") => {
     const len = (FINISHX - 80) * val * gp; // 100% = full track
-    const won = av === bv ? side === "a" : side === "a" ? av > bv : bv > av;
+    const won = WIN[mkey] === side;
     const y = side === "a" ? ay : by;
     return (
       <>
@@ -343,10 +345,10 @@ const ScoreBar: React.FC = () => {
     const rf = resolveFrame(r);
     if (f >= rf) {
       if (r.win === "a") { winsA++; if (f - rf < 9) popA = 1 + 0.5 * (1 - (f - rf) / 9); }
-      else { winsB++; if (f - rf < 9) popB = 1 + 0.5 * (1 - (f - rf) / 9); }
+      else if (r.win === "b") { winsB++; if (f - rf < 9) popB = 1 + 0.5 * (1 - (f - rf) / 9); }
     }
   });
-  const dot = (i: number) => (f >= resolveFrame(ROUNDS[i]) ? (ROUNDS[i].win === "a" ? A : B) : f >= ROUNDS[i].from ? t.faint : t.panelBorder);
+  const dot = (i: number) => (f >= resolveFrame(ROUNDS[i]) ? (ROUNDS[i].win === "a" ? A : ROUNDS[i].win === "b" ? B : t.dim) : f >= ROUNDS[i].from ? t.faint : t.panelBorder);
   return (
     <>
     <div style={{ position: "absolute", top: 56, left: 56, right: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -389,8 +391,9 @@ const Recap: React.FC = () => {
   const f = useCurrentFrame();
   const sq = useSq();
   const winsA = ROUNDS.filter((r) => r.win === "a").length;
-  const winsB = ROUNDS.length - winsA;
-  const champ = winsA >= winsB ? { s: D.a, color: A } : { s: D.b, color: B };
+  const winsB = ROUNDS.filter((r) => r.win === "b").length;
+  const drawn = winsA === winsB;
+  const champ = winsA > winsB ? { s: D.a, color: A } : { s: D.b, color: B };
   const pop = (d: number) => spring({ frame: f - d, fps: FPS, config: { damping: 12 } });
   const valFs = sq ? 30 : 42, labelFs = sq ? 20 : 26, rowH = sq ? 56 : 92, tableTop = sq ? 322 : 548;
   return (
@@ -413,14 +416,14 @@ const Recap: React.FC = () => {
         const av = c.fmt(D.a), bv = c.fmt(D.b), w = WIN[c.key];
         return (
           <div key={c.key} style={{ position: "absolute", left: 64, right: 64, top: tableTop + i * rowH, display: "flex", alignItems: "center", opacity: s, transform: `translateY(${(1 - s) * 12}px)` }}>
-            <span style={{ flex: 1, textAlign: "right", fontFamily: t.mono, fontSize: valFs, fontWeight: w === "a" ? 800 : 500, color: w === "a" ? A : t.faint }}>{av}</span>
+            <span style={{ flex: 1, textAlign: "right", fontFamily: t.mono, fontSize: valFs, fontWeight: w === "a" ? 800 : 600, color: w === "a" ? A : w === "tie" ? A : t.faint }}>{av}</span>
             <span style={{ width: sq ? 290 : 410, textAlign: "center", fontFamily: t.mono, fontSize: labelFs, color: t.dim, letterSpacing: 1 }}>{c.label}</span>
-            <span style={{ flex: 1, textAlign: "left", fontFamily: t.mono, fontSize: valFs, fontWeight: w === "b" ? 800 : 500, color: w === "b" ? B : t.faint }}>{bv}</span>
+            <span style={{ flex: 1, textAlign: "left", fontFamily: t.mono, fontSize: valFs, fontWeight: w === "b" ? 800 : 600, color: w === "b" ? B : w === "tie" ? B : t.faint }}>{bv}</span>
           </div>
         );
       })}
-      <div style={{ position: "absolute", bottom: sq ? 92 : 152, left: 0, right: 0, textAlign: "center", fontFamily: t.sans, fontSize: sq ? 32 : 46, fontWeight: 700, color: champ.color, opacity: pop(18 + CATS.length * 6 + 8) }}>
-        {champ.s.name} wins
+      <div style={{ position: "absolute", bottom: sq ? 92 : 152, left: 0, right: 0, textAlign: "center", fontFamily: t.sans, fontSize: sq ? 32 : 46, fontWeight: 700, color: drawn ? t.text : champ.color, opacity: pop(18 + CATS.length * 6 + 8) }}>
+        {drawn ? "it's a draw" : `${champ.s.name} wins`}
       </div>
       <div style={{ position: "absolute", bottom: 30, left: 0, right: 0, display: "flex", justifyContent: "center", alignItems: "center", gap: 11 }}>
         <GitHubMark size={24} color={t.faint} />
