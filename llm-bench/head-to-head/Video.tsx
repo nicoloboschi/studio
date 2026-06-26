@@ -397,8 +397,10 @@ const Recap: React.FC = () => {
   const valFs = sq ? 30 : 42, labelFs = sq ? 20 : 26, rowH = sq ? 56 : 92, tableTop = sq ? 322 : 548;
   return (
     <Bg>
+      {/* runtime spec — same badge as the rounds */}
+      <div style={{ position: "absolute", top: 18, left: 0, right: 0, textAlign: "center", fontFamily: t.mono, fontSize: 21, fontWeight: 500, letterSpacing: 3, color: t.faint }}>{D.runtime}</div>
       <AbsoluteFill style={{ alignItems: "center" }}>
-        <div style={{ fontFamily: t.mono, fontSize: sq ? 22 : 26, letterSpacing: 4, color: t.faint, marginTop: sq ? 40 : 72 }}>FINAL TALLY</div>
+        <div style={{ fontFamily: t.mono, fontSize: sq ? 22 : 26, letterSpacing: 4, color: t.faint, marginTop: sq ? 58 : 96 }}>FINAL TALLY</div>
         <div style={{ display: "flex", alignItems: "center", gap: sq ? 28 : 44, marginTop: sq ? 14 : 24, fontFamily: t.mono, fontWeight: 800 }}>
           <span style={{ fontSize: sq ? 88 : 132, color: A, transform: `scale(${pop(4)})`, display: "inline-block" }}>{winsA}</span>
           <span style={{ fontSize: sq ? 50 : 72, color: t.faint }}>–</span>
