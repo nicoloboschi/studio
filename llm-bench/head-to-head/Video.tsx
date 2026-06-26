@@ -349,9 +349,7 @@ const ScoreBar: React.FC = () => {
   const dot = (i: number) => (f >= resolveFrame(ROUNDS[i]) ? (ROUNDS[i].win === "a" ? A : B) : f >= ROUNDS[i].from ? t.faint : t.panelBorder);
   return (
     <>
-    {/* runtime badge (MLX · chip) */}
-    <div style={{ position: "absolute", top: 18, left: 0, right: 0, textAlign: "center", fontFamily: t.mono, fontSize: 21, fontWeight: 500, letterSpacing: 3, color: t.faint }}>{D.runtime}</div>
-    <div style={{ position: "absolute", top: 62, left: 56, right: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div style={{ position: "absolute", top: 56, left: 56, right: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
         <ModelIcon icon={D.a.icon} color={A} size={30} />
         <span style={{ fontFamily: t.sans, fontSize: 26, fontWeight: 600, color: A }}>{A_NAME}</span>
@@ -369,7 +367,7 @@ const ScoreBar: React.FC = () => {
     {/* GitHub source footer */}
     <div style={{ position: "absolute", bottom: 30, left: 0, right: 0, display: "flex", justifyContent: "center", alignItems: "center", gap: 11 }}>
       <GitHubMark size={24} color={t.faint} />
-      <span style={{ fontFamily: t.mono, fontSize: 22, color: t.faint, letterSpacing: 1 }}>{D.repo}</span>
+      <span style={{ fontFamily: t.mono, fontSize: 22, color: t.faint, letterSpacing: 1 }}>{D.repo} · {D.runtime}</span>
     </div>
     </>
   );
@@ -397,10 +395,8 @@ const Recap: React.FC = () => {
   const valFs = sq ? 30 : 42, labelFs = sq ? 20 : 26, rowH = sq ? 56 : 92, tableTop = sq ? 322 : 548;
   return (
     <Bg>
-      {/* runtime spec — same badge as the rounds */}
-      <div style={{ position: "absolute", top: 18, left: 0, right: 0, textAlign: "center", fontFamily: t.mono, fontSize: 21, fontWeight: 500, letterSpacing: 3, color: t.faint }}>{D.runtime}</div>
       <AbsoluteFill style={{ alignItems: "center" }}>
-        <div style={{ fontFamily: t.mono, fontSize: sq ? 22 : 26, letterSpacing: 4, color: t.faint, marginTop: sq ? 58 : 96 }}>FINAL TALLY</div>
+        <div style={{ fontFamily: t.mono, fontSize: sq ? 22 : 26, letterSpacing: 4, color: t.faint, marginTop: sq ? 44 : 78 }}>FINAL TALLY</div>
         <div style={{ display: "flex", alignItems: "center", gap: sq ? 28 : 44, marginTop: sq ? 14 : 24, fontFamily: t.mono, fontWeight: 800 }}>
           <span style={{ fontSize: sq ? 88 : 132, color: A, transform: `scale(${pop(4)})`, display: "inline-block" }}>{winsA}</span>
           <span style={{ fontSize: sq ? 50 : 72, color: t.faint }}>–</span>
@@ -428,7 +424,7 @@ const Recap: React.FC = () => {
       </div>
       <div style={{ position: "absolute", bottom: 30, left: 0, right: 0, display: "flex", justifyContent: "center", alignItems: "center", gap: 11 }}>
         <GitHubMark size={24} color={t.faint} />
-        <span style={{ fontFamily: t.mono, fontSize: 22, color: t.faint }}>{D.repo}</span>
+        <span style={{ fontFamily: t.mono, fontSize: 22, color: t.faint }}>{D.repo} · {D.runtime}</span>
       </div>
     </Bg>
   );
