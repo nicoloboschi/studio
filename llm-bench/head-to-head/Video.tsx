@@ -8,7 +8,7 @@ import data from "./data.json";
 
 type Side = {
   name: string; icon: string | null; params_b: number; size_gb: number; downloads: number;
-  single: number; prefill: number; levels: { c: number; agg: number }[]; schema_ok: number; schema_total: number;
+  single: number; prefill: number; levels: { c: number; agg: number }[]; schema_ok: number; schema_total: number; ifeval: number | null; gsm8k: number | null;
 };
 const D = data as unknown as { machine: string; runtime: string; repo: string; music?: string; a: Side; b: Side };
 
@@ -47,15 +47,26 @@ const gmax = Math.max(peakA, peakB);
 // layout adapts to canvas height: tall 9:16 vs square 1:1 (sq = compact). Same components serve both.
 const useSq = () => useVideoConfig().height < 1300;
 
-const R_DUR = { single: 120, parallel: 78, prefill: 58, schema: 62, size: 72 };
-const ROUNDS = [
-  { from: 0, dur: R_DUR.single, win: "a" as const },   // single = live streaming round
-  { from: 120, dur: R_DUR.parallel, win: "a" as const },
-  { from: 198, dur: R_DUR.prefill, win: "a" as const },
-  { from: 256, dur: R_DUR.schema, win: "b" as const },
-  { from: 318, dur: R_DUR.size, win: "a" as const },
-];
-const TOTAL = 318 + R_DUR.size;
+// round winners computed from the data — correct for ANY pair, not just the canonical one
+const lastAgg = (s: Side) => s.levels[s.levels.length - 1].agg;
+const WIN: Record<string, "a" | "b"> = {
+  single: D.a.single >= D.b.single ? "a" : "b",
+  parallel: lastAgg(D.a) >= lastAgg(D.b) ? "a" : "b",
+  prefill: D.a.prefill >= D.b.prefill ? "a" : "b",
+  schema: D.a.schema_ok >= D.b.schema_ok ? "a" : "b",
+  ifeval: (D.a.ifeval ?? 0) >= (D.b.ifeval ?? 0) ? "a" : "b",
+  gsm8k: (D.a.gsm8k ?? 0) >= (D.b.gsm8k ?? 0) ? "a" : "b",
+  size: D.a.size_gb <= D.b.size_gb ? "a" : "b",
+};
+// each round = quick reveal, then a generous HOLD on the settled result before cutting
+const ROUND_DUR: Record<string, number> = { single: 150, parallel: 96, prefill: 92, schema: 96, ifeval: 96, gsm8k: 96, size: 100 };
+const ORDER = ["single", "parallel", "prefill", "schema", "ifeval", "gsm8k", "size"];
+let _acc = 0;
+const ROUNDS = ORDER.map((key) => { const r = { key, from: _acc, dur: ROUND_DUR[key], win: WIN[key] }; _acc += ROUND_DUR[key]; return r; });
+const ROUNDS_END = _acc;
+const RECAP_DUR = 132;
+const TOTAL = ROUNDS_END + RECAP_DUR;
+const SEQ: Record<string, { from: number; dur: number }> = Object.fromEntries(ROUNDS.map((r) => [r.key, r]));
 const resolveFrame = (r: { from: number; dur: number }) => r.from + Math.floor(r.dur * 0.62);
 
 const Watermark: React.FC<{ n: number }> = ({ n }) => {
@@ -290,6 +301,40 @@ const SizeRound: React.FC<{ n: number }> = ({ n }) => {
   );
 };
 
+// ===== accuracy round (ifeval / gsm8k) — bars on an absolute 0–100% scale =====
+const AccuracyRound: React.FC<{ n: number; mkey: "ifeval" | "gsm8k"; title: string; unit: string }> = ({ n, mkey, title, unit }) => {
+  const t = useDesign();
+  const f = useCurrentFrame();
+  const sq = useSq();
+  const gp = clamp01((f - 10) / 42);
+  const av = D.a[mkey] ?? 0, bv = D.b[mkey] ?? 0;
+  const FINISHX = 660;
+  const ay = sq ? 472 : 740, by = sq ? 716 : 1120, barH = sq ? 104 : 132, numFs = sq ? 80 : 96;
+  const lane = (val: number, color: string, side: "a" | "b") => {
+    const len = (FINISHX - 80) * val * gp; // 100% = full track
+    const won = av === bv ? side === "a" : side === "a" ? av > bv : bv > av;
+    const y = side === "a" ? ay : by;
+    return (
+      <>
+        <div style={{ position: "absolute", left: 80, top: y - (sq ? 56 : 64) }}><NameTag s={side === "a" ? D.a : D.b} color={color} fontSize={sq ? 40 : 46} /></div>
+        <div style={{ position: "absolute", left: 80, top: y, width: len, height: barH, borderRadius: 12, background: color, boxShadow: `0 0 50px ${color}40` }} />
+        <div style={{ position: "absolute", right: 56, top: y + (sq ? 14 : 18), textAlign: "right", fontFamily: t.mono, fontSize: numFs, fontWeight: 700, color }}>{Math.round(val * 100 * Math.min(1, gp))}<span style={{ fontSize: numFs * 0.5, color: t.faint }}>%</span></div>
+        {won && <WinStamp color={color} x={FINISHX - 170} y={y + (sq ? 22 : 28)} at={46} />}
+      </>
+    );
+  };
+  return (
+    <Bg>
+      <Watermark n={n} />
+      <Title text={title} unit={unit} />
+      {/* 100% reference line */}
+      <div style={{ position: "absolute", left: FINISHX, top: ay - 70, width: 2, height: by + barH - (ay - 70) + 6, background: t.faint, opacity: 0.4 }} />
+      {lane(av, A, "a")}
+      {lane(bv, B, "b")}
+    </Bg>
+  );
+};
+
 const ScoreBar: React.FC = () => {
   const t = useDesign();
   const f = useCurrentFrame();
@@ -330,6 +375,67 @@ const ScoreBar: React.FC = () => {
   );
 };
 
+// ===== final recap — score + tale-of-the-tape across all categories =====
+const CATS: { key: string; label: string; fmt: (s: Side) => string }[] = [
+  { key: "single", label: "single tok/s", fmt: (s) => s.single.toFixed(0) },
+  { key: "parallel", label: "peak tok/s", fmt: (s) => `${Math.round(lastAgg(s))}` },
+  { key: "prefill", label: "prefill tok/s", fmt: (s) => `${Math.round(s.prefill)}` },
+  { key: "schema", label: "structured", fmt: (s) => `${s.schema_ok}/${s.schema_total}` },
+  { key: "ifeval", label: "instruction", fmt: (s) => `${Math.round((s.ifeval ?? 0) * 100)}%` },
+  { key: "gsm8k", label: "math", fmt: (s) => `${Math.round((s.gsm8k ?? 0) * 100)}%` },
+  { key: "size", label: "size (GB)", fmt: (s) => s.size_gb.toFixed(1) },
+];
+
+const Recap: React.FC = () => {
+  const t = useDesign();
+  const f = useCurrentFrame();
+  const sq = useSq();
+  const winsA = ROUNDS.filter((r) => r.win === "a").length;
+  const winsB = ROUNDS.length - winsA;
+  const champ = winsA >= winsB ? { s: D.a, color: A } : { s: D.b, color: B };
+  const pop = (d: number) => spring({ frame: f - d, fps: FPS, config: { damping: 12 } });
+  const valFs = sq ? 30 : 42, labelFs = sq ? 20 : 26, rowH = sq ? 56 : 92, tableTop = sq ? 322 : 548;
+  return (
+    <Bg>
+      <AbsoluteFill style={{ alignItems: "center" }}>
+        <div style={{ fontFamily: t.mono, fontSize: sq ? 22 : 26, letterSpacing: 4, color: t.faint, marginTop: sq ? 40 : 72 }}>FINAL TALLY</div>
+        <div style={{ display: "flex", alignItems: "center", gap: sq ? 28 : 44, marginTop: sq ? 14 : 24, fontFamily: t.mono, fontWeight: 800 }}>
+          <span style={{ fontSize: sq ? 88 : 132, color: A, transform: `scale(${pop(4)})`, display: "inline-block" }}>{winsA}</span>
+          <span style={{ fontSize: sq ? 50 : 72, color: t.faint }}>–</span>
+          <span style={{ fontSize: sq ? 88 : 132, color: B, transform: `scale(${pop(10)})`, display: "inline-block" }}>{winsB}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: sq ? 22 : 40, marginTop: sq ? 4 : 14, fontFamily: t.sans, fontWeight: 600, fontSize: sq ? 25 : 34 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 10, color: A }}><ModelIcon icon={D.a.icon} color={A} size={sq ? 26 : 34} />{D.a.name}</span>
+          <span style={{ color: t.faint, fontFamily: t.mono, fontSize: sq ? 20 : 28 }}>vs</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 10, color: B }}>{D.b.name}<ModelIcon icon={D.b.icon} color={B} size={sq ? 26 : 34} /></span>
+        </div>
+      </AbsoluteFill>
+      {CATS.map((c, i) => {
+        const s = pop(18 + i * 6);
+        const av = c.fmt(D.a), bv = c.fmt(D.b), w = WIN[c.key];
+        return (
+          <div key={c.key} style={{ position: "absolute", left: 64, right: 64, top: tableTop + i * rowH, display: "flex", alignItems: "center", opacity: s, transform: `translateY(${(1 - s) * 12}px)` }}>
+            <span style={{ flex: 1, textAlign: "right", fontFamily: t.mono, fontSize: valFs, fontWeight: w === "a" ? 800 : 500, color: w === "a" ? A : t.faint }}>{av}</span>
+            <span style={{ width: sq ? 290 : 410, textAlign: "center", fontFamily: t.mono, fontSize: labelFs, color: t.dim, letterSpacing: 1 }}>{c.label}</span>
+            <span style={{ flex: 1, textAlign: "left", fontFamily: t.mono, fontSize: valFs, fontWeight: w === "b" ? 800 : 500, color: w === "b" ? B : t.faint }}>{bv}</span>
+          </div>
+        );
+      })}
+      <div style={{ position: "absolute", bottom: sq ? 92 : 152, left: 0, right: 0, textAlign: "center", fontFamily: t.sans, fontSize: sq ? 32 : 46, fontWeight: 700, color: champ.color, opacity: pop(18 + CATS.length * 6 + 8) }}>
+        {champ.s.name} wins
+      </div>
+      <div style={{ position: "absolute", bottom: 30, left: 0, right: 0, display: "flex", justifyContent: "center", alignItems: "center", gap: 11 }}>
+        <GitHubMark size={24} color={t.faint} />
+        <span style={{ fontFamily: t.mono, fontSize: 22, color: t.faint }}>{D.repo}</span>
+      </div>
+    </Bg>
+  );
+};
+
+const Round: React.FC<{ k: string; children: React.ReactNode }> = ({ k, children }) => (
+  <Sequence from={SEQ[k].from} durationInFrames={SEQ[k].dur}>{children}</Sequence>
+);
+
 const Match: React.FC = () => (
   <AbsoluteFill style={{ background: llmBench.bg }}>
     {D.music ? (
@@ -338,12 +444,15 @@ const Match: React.FC = () => (
         volume={(f) => interpolate(f, [0, 8, TOTAL - 22, TOTAL], [0, 0.85, 0.85, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}
       />
     ) : null}
-    <Sequence durationInFrames={ROUNDS[0].dur}><StreamRound n={1} /></Sequence>
-    <Sequence from={ROUNDS[1].from} durationInFrames={ROUNDS[1].dur}><ParallelRound n={2} /></Sequence>
-    <Sequence from={ROUNDS[2].from} durationInFrames={ROUNDS[2].dur}><SpeedRound n={3} mkey="prefill" title="PREFILL" /></Sequence>
-    <Sequence from={ROUNDS[3].from} durationInFrames={ROUNDS[3].dur}><SchemaRound n={4} /></Sequence>
-    <Sequence from={ROUNDS[4].from} durationInFrames={ROUNDS[4].dur}><SizeRound n={5} /></Sequence>
-    <Sequence durationInFrames={TOTAL}><ScoreBar /></Sequence>
+    <Round k="single"><StreamRound n={1} /></Round>
+    <Round k="parallel"><ParallelRound n={2} /></Round>
+    <Round k="prefill"><SpeedRound n={3} mkey="prefill" title="PREFILL" /></Round>
+    <Round k="schema"><SchemaRound n={4} /></Round>
+    <Round k="ifeval"><AccuracyRound n={5} mkey="ifeval" title="INSTRUCTION FOLLOWING" unit="IFEval · prompt-level strict" /></Round>
+    <Round k="gsm8k"><AccuracyRound n={6} mkey="gsm8k" title="MATH" unit="GSM8K · exact match" /></Round>
+    <Round k="size"><SizeRound n={7} /></Round>
+    <Sequence durationInFrames={ROUNDS_END}><ScoreBar /></Sequence>
+    <Sequence from={ROUNDS_END} durationInFrames={RECAP_DUR}><Recap /></Sequence>
   </AbsoluteFill>
 );
 

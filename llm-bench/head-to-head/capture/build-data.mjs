@@ -74,6 +74,9 @@ const toSide = (m) => ({
   levels: m.speed.levels.map((l) => ({ c: l.concurrency, agg: r1(l.aggregate_tokens_per_s) })),
   schema_ok: m.schema.schema_ok,
   schema_total: m.schema.num_tasks,
+  // quality scores (0..1): IFEval instruction-following, GSM8K math
+  ifeval: m.quality?.ifeval ? Math.round(m.quality.ifeval.prompt_level_strict_acc * 1000) / 1000 : null,
+  gsm8k: m.quality?.gsm8k ? Math.round((m.quality.gsm8k.exact_match_flexible ?? m.quality.gsm8k.exact_match_strict) * 1000) / 1000 : null,
 });
 
 const ma = pick(names[0], 0), mb = pick(names[1], 1);
