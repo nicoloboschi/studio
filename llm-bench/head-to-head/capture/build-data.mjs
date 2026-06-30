@@ -17,8 +17,11 @@ import { homedir } from "node:os";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const STUDIO = join(here, "..", "..", ".."); // capture → head-to-head → llm-bench → studio
+// some families share a brand logo (Ministral/Devstral are Mistral models)
+const ICON_ALIAS = { ministral: "mistral", devstral: "mistral" };
 const iconFor = (family) => {
-  const key = String(family || "").toLowerCase().match(/^[a-z]+/)?.[0];
+  let key = String(family || "").toLowerCase().match(/^[a-z]+/)?.[0];
+  key = ICON_ALIAS[key] ?? key;
   return key && existsSync(join(STUDIO, "public", "icons", `${key}.png`)) ? key : null;
 };
 

@@ -28,14 +28,21 @@ for (let i = 0; i < models.length; i++) for (let j = i + 1; j < models.length; j
 
 const argv = process.argv.slice(2);
 // --both = square (default) + vertical · --square = square only · default = vertical only
-const aspect = argv.includes("--both") ? ["--vertical"] : argv.includes("--square") ? [] : ["--vertical", "--no-x"];
-const passthru = argv.filter((a) => a !== "--square" && a !== "--both");
-const label = argv.includes("--both") ? "square + vertical" : argv.includes("--square") ? "square" : "vertical";
+const flags = argv.filter((a) => a.startsWith("--"));
+// positional args = model substrings → render ONLY pairs involving at least one (e.g. just new models)
+const filters = argv.filter((a) => !a.startsWith("--"));
+const aspect = flags.includes("--both") ? ["--vertical"] : flags.includes("--square") ? [] : ["--vertical", "--no-x"];
+const passthru = flags.filter((a) => a !== "--square" && a !== "--both");
+const label = flags.includes("--both") ? "square + vertical" : flags.includes("--square") ? "square" : "vertical";
 
-console.log(`${models.length} models → ${pairs.length} matchups (${label})`);
+const selected = filters.length
+  ? pairs.filter(([a, b]) => filters.some((fl) => a.toLowerCase().includes(fl.toLowerCase()) || b.toLowerCase().includes(fl.toLowerCase())))
+  : pairs;
+
+console.log(`${models.length} models → ${selected.length}/${pairs.length} matchups (${label})${filters.length ? ` · involving: ${filters.join(", ")}` : ""}`);
 let ok = 0, fail = 0;
-pairs.forEach(([a, b], i) => {
-  process.stdout.write(`[${i + 1}/${pairs.length}] ${a} vs ${b} … `);
+selected.forEach(([a, b], i) => {
+  process.stdout.write(`[${i + 1}/${selected.length}] ${a} vs ${b} … `);
   try {
     execFileSync("node", [join(ROOT, "scripts/render-1v1.mjs"), a, b, ...aspect, ...passthru], { cwd: ROOT, stdio: ["ignore", "ignore", "ignore"] });
     ok++; console.log("ok");

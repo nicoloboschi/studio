@@ -31,6 +31,7 @@ npm run render:1v1                                   # first two completed model
 npm run render:1v1:all                               # EVERY unique pair (incl. same family/diff size), vertical
 npm run render:1v1:all -- --square                   # …as square (1:1) instead
 npm run render:1v1:all -- --both                     # …both formats in one pass
+npm run render:1v1:all -- --both Qwen3.6 LFM         # …only pairs INVOLVING these models (e.g. newly-added ones)
 ```
 
 **Exports route by aspect** (set in `DEST` in `scripts/render-1v1.mjs`): **square → `~/Documents/x1v1`**,
